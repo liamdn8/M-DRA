@@ -9,6 +9,13 @@ import java.util.List;
 
 public class Components {
 
+    public static void init() {
+        setScheduleCondition();
+    }
+
+    /*
+     * List of jobs
+     */
     public static List<Job> jobs = new ArrayList<>(List.of(
             new Job("11", Type.PERFORMANCE, 120, 120),
             new Job("12", Type.PERFORMANCE, 100, 120),
@@ -32,4 +39,24 @@ public class Components {
             new Cluster("1", Type.INTEGRATION, 240),
             new Cluster("1", Type.FUNCTIONAL, 120)
     ));
+
+    public static boolean[][] condition = new boolean[jobs.size()][clusters.size()];
+
+    public static void setScheduleCondition() {
+        for (int i = 0; i < clusters.size(); i++) {
+            for (int j = 0; j < jobs.size(); j++) {
+                condition[i][j] = isMatchScheduleCondition(clusters.get(i), jobs.get(j));
+            }
+        }
+    }
+
+    public static boolean isMatchScheduleCondition(Cluster cluster, Job job) {
+        return job.getType().getRank() <= cluster.getType().getRank();
+    }
+
+    public static boolean[][] allocation = new boolean[jobs.size()][clusters.size()];
+
+    public static void allocate(int i, int j) {
+        allocation[i][j] = true;
+    }
 }

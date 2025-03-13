@@ -13,4 +13,14 @@ public class Job {
     Type type;
     int mem;
     int duration;
+
+    boolean isAllocated;
+    boolean isFailed;
+
+    public Job(String id, Type type, int mem, int duration) {
+        this.id = id;
+        this.type = type;
+        this.mem = mem;
+        this.duration = duration;
+    }
 }
