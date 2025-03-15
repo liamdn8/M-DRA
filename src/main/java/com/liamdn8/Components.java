@@ -9,10 +9,6 @@ import java.util.List;
 
 public class Components {
 
-    public static void init() {
-        setScheduleCondition();
-    }
-
     /*
      * List of jobs
      */
@@ -40,23 +36,5 @@ public class Components {
             new Cluster("1", Type.FUNCTIONAL, 120)
     ));
 
-    public static boolean[][] condition = new boolean[jobs.size()][clusters.size()];
 
-    public static void setScheduleCondition() {
-        for (int i = 0; i < clusters.size(); i++) {
-            for (int j = 0; j < jobs.size(); j++) {
-                condition[i][j] = isMatchScheduleCondition(clusters.get(i), jobs.get(j));
-            }
-        }
-    }
-
-    public static boolean isMatchScheduleCondition(Cluster cluster, Job job) {
-        return job.getType().getRank() <= cluster.getType().getRank();
-    }
-
-    public static boolean[][] allocation = new boolean[jobs.size()][clusters.size()];
-
-    public static void allocate(int i, int j) {
-        allocation[i][j] = true;
-    }
 }

@@ -11,4 +11,11 @@ public class Cluster {
     String id;
     Type type;
     int memCapacity;
+    int memAvailable;
+
+    public Cluster(String id, Type type, int memCapacity) {
+        this.id = id;
+        this.type = type;
+        this.memCapacity = memCapacity;
+    }
 }
