@@ -5,32 +5,48 @@ import numpy as np
 # 1) Problem dimensions (swapped)
 # -----------------------
 N = 2  # number of clusters
-K = 2  # number of worker nodes
-M = 2  # number of jobs
+M = 10 # number of jobs
+K = 4  # number of worker nodes
 T = 4  # number of time slices
 
 # -----------------------
 # 2) Input data
 # -----------------------
 # CPU and memory demands of each job
-c = [2, 3]  # CPU demand for jobs j=0..1
-e = [4, 2]  # Memory demand for jobs j=0..1
+c = [4, 3, 4, 5, 6, 2, 3, 4, 5, 6]  # CPU demand for jobs j=0..1
+e = [9, 6, 8, 4, 6, 8, 4, 6, 8, 8]  # Memory demand for jobs j=0..1
 
 # Node capacities (CPU and memory)
-r = [4, 4]  # CPU capacity for nodes k=0..1
-s = [6, 6]  # Memory capacity for nodes k=0..1
+r = [10, 10, 10, 10]  # CPU capacity for nodes k=0..1
+s = [20, 24, 20, 24]  # Memory capacity for nodes k=0..1
 
 # G[j][t] = 1 if job j is active at time t, else 0
 G = [
     [1, 1, 0, 0],  # job 0 active at times t=0,1
-    [0, 1, 1, 0],  # job 1 active at times t=1,2
+    [1, 1, 0, 0],  # job 1 active at times t=0,1
+    [0, 1, 1, 0],  # job 2 active at times t=1,2
+    [0, 1, 1, 1],  # job 3 active at times t=2,3
+    [0, 1, 1, 0],  # job 4 active at times t=1,2
+    [0, 1, 1, 1],  # job 5 active at times t=1,2,3
+    [1, 1, 1, 0],  # job 6 active at times t=0,1
+    [0, 0, 1, 0],  # job 7 active at times t=2
+    [0, 0, 1, 1],  # job 8 active at times t=2,3
+    [0, 1, 1, 1],  # job 9 active at times t=1,2,3
 ]
 
 # h[j][i] = 1 if job j is assigned to cluster i, else 0
 # Now, i ranges over clusters (i = 0,..,N-1)
 h = [
     [1, 0],  # job 0 assigned to cluster 0
-    [0, 1],  # job 1 assigned to cluster 1
+    [1, 0],  # job 1 assigned to cluster 0
+    [1, 0],  # job 2 assigned to cluster 0
+    [1, 0],  # job 3 assigned to cluster 0
+    [1, 0],  # job 4 assigned to cluster 0
+    [1, 0],  # job 5 assigned to cluster 0
+    [0, 1],  # job 6 assigned to cluster 1
+    [0, 1],  # job 7 assigned to cluster 1
+    [0, 1],  # job 8 assigned to cluster 1
+    [0, 1],  # job 9 assigned to cluster 1
 ]
 
 # ------------------------------------------------------
@@ -94,8 +110,7 @@ objective = cp.Minimize(0.5 * obj)
 # 6) Solve
 # -----------------------
 problem = cp.Problem(objective, constraints)
-result = problem.solve(
-)
+result = problem.solve()
 
 # -----------------------
 # 7) Print results
@@ -103,12 +118,13 @@ result = problem.solve(
 print("Solver status:", problem.status)
 print("Optimal objective value (relocations):", problem.value)
 
-# x[i,k,t] solution: now i indexes clusters and k indexes worker nodes
-x_sol = x.value
-print("\nNode-to-Cluster Assignments (x):")
-for t_ in range(T):
-    print(f"Time slice t={t_}:")
-    for k_ in range(K):
-        assigned_cluster = np.argmax(x_sol[:, k_, t_])
-        print(f"  Worker Node {k_} -> Cluster {assigned_cluster} (x={x_sol[:, k_, t_]})")
-
+if problem.status == cp.OPTIMAL and x.value is not None:
+    # x[i,k,t] solution: now i indexes clusters and k indexes worker nodes
+    x_sol = x.value
+    for t_ in range(T):
+        print(f"Time slice t={t_}:")
+        for k_ in range(K):
+            assigned_cluster = np.argmax(x_sol[:, k_, t_])
+            print(f"  Worker Node {k_} -> Cluster {assigned_cluster} (x={x_sol[:, k_, t_]})")
+else:
+    print("No optimal solution found. Problem status:", problem.status)
