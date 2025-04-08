@@ -20,8 +20,8 @@ e = [9, 6, 8, 4, 6, 8, 4, 6, 8, 8]  # Memory demand for jobs j=0..1
 r = [10, 10, 10, 10]  # CPU capacity for nodes k=0..1
 s = [20, 24, 20, 24]  # Memory capacity for nodes k=0..1
 
-# G[j][t] = 1 if job j is active at time t, else 0
-G = [
+# g[j][t] = 1 if job j is active at time t, else 0
+g = [
     [1, 1, 0, 0],  # job 0 active at times t=0,1
     [1, 1, 0, 0],  # job 1 active at times t=0,1
     [0, 1, 1, 0],  # job 2 active at times t=1,2
@@ -56,15 +56,10 @@ h = [
 # Here, i indexes clusters (0 to N-1) and k indexes worker nodes (0 to K-1)
 x = cp.Variable((N, K, T), boolean=True)
 
-# d[i,k,t] >= 0 to capture |x[i,k,t] - x[i,k,t-1]|
-# Defined for time slices t=1,..,T-1 (T-1 "gaps").
-d = cp.Variable((N, K, T-1), nonneg=True)
-
-constraints = []
-
 # -----------------------
 # 4) Constraints
 # -----------------------
+constraints = []
 
 # (A) Node allocation: each worker node k must be assigned to exactly one cluster i at each time t
 for k_ in range(K):
@@ -75,7 +70,7 @@ for k_ in range(K):
 for i_ in range(N):
     for t_ in range(T):
         # Total CPU demand for jobs assigned to cluster i_ at time t
-        cpu_demand = sum(c[j_] * G[j_][t_] * h[j_][i_] for j_ in range(M))
+        cpu_demand = sum(c[j_] * g[j_][t_] * h[j_][i_] for j_ in range(M))
         # Total CPU capacity from nodes assigned to cluster i_ at time t
         cpu_capacity = cp.sum([r[k_] * x[i_, k_, t_] for k_ in range(K)])
         constraints.append(cpu_demand <= cpu_capacity)
@@ -83,26 +78,25 @@ for i_ in range(N):
 # (C) Memory capacity per cluster i at time t
 for i_ in range(N):
     for t_ in range(T):
-        mem_demand = sum(e[j_] * G[j_][t_] * h[j_][i_] for j_ in range(M))
+        mem_demand = sum(e[j_] * g[j_][t_] * h[j_][i_] for j_ in range(M))
         mem_capacity = cp.sum([s[k_] * x[i_, k_, t_] for k_ in range(K)])
         constraints.append(mem_demand <= mem_capacity)
-
-# (D) Relocation constraints: linearize |x[i,k,t] - x[i,k,t-1]|
-for i_ in range(N):
-    for k_ in range(K):
-        for t_ in range(1, T):
-            constraints.append(d[i_, k_, t_-1] >= x[i_, k_, t_] - x[i_, k_, t_-1])
-            constraints.append(d[i_, k_, t_-1] >= x[i_, k_, t_-1] - x[i_, k_, t_])
 
 # -----------------------
 # 5) Objective
 # -----------------------
 # We sum up d[i,k,t] and multiply by 0.5 to count one relocation per change.
-obj = 0
-for i_ in range(N):
-    for k_ in range(K):
-        for t_ in range(T-1):
-            obj += d[i_, k_, t_]
+# obj = 0
+# for i_ in range(N):
+#     for k_ in range(K):
+#         for t_ in range(T-1):
+#             obj += d[i_, k_, t_]
+
+obj = sum(
+        sum(
+            sum(cp.abs(x[i_, k_, t_] - x[i_, k_, t_-1]) for t_ in range(1, T) )
+            for k_ in range(K))
+        for i_ in range(N))
 
 objective = cp.Minimize(0.5 * obj)
 
@@ -120,7 +114,7 @@ print("Optimal objective value (relocations):", problem.value)
 
 if problem.status == cp.OPTIMAL and x.value is not None:
     # x[i,k,t] solution: now i indexes clusters and k indexes worker nodes
-    x_sol = x.value
+    x_sol = np.abs(x.value)
     for t_ in range(T):
         print(f"Time slice t={t_}:")
         for k_ in range(K):
