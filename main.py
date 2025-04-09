@@ -1,5 +1,7 @@
 import cvxpy as cp
 import numpy as np
+import pandas as pd
+from tabulate import tabulate
 
 # -----------------------
 # 1) Problem dimensions (swapped)
@@ -112,13 +114,44 @@ result = problem.solve()
 print("Solver status:", problem.status)
 print("Optimal objective value (relocations):", problem.value)
 
+
 if problem.status == cp.OPTIMAL and x.value is not None:
     # x[i,k,t] solution: now i indexes clusters and k indexes worker nodes
     x_sol = np.abs(x.value)
+
+    table = []
     for t_ in range(T):
-        print(f"Time slice t={t_}:")
+        print("-----------------------")
+        print(f"Time slice t={t_}")
+        print("-----------------------")
+
         for k_ in range(K):
             assigned_cluster = np.argmax(x_sol[:, k_, t_])
             print(f"  Worker Node {k_} -> Cluster {assigned_cluster} (x={x_sol[:, k_, t_]})")
+
+        for i_ in range (N):
+            cpu_usage = sum(c[j_] * g[j_][t_] * h[j_][i_] for j_ in range(M))
+            mem_usage = sum(e[j_] * g[j_][t_] * h[j_][i_] for j_ in range(M))
+            cpu_cap = cp.sum([r[k_] * x[i_, k_, t_] for k_ in range(K)]).value
+            mem_cap = cp.sum([s[k_] * x[i_, k_, t_] for k_ in range(K)]).value
+
+            cluster_table = []
+            cluster_table.append({
+                "Time Slice": t_,
+                "Cluster": i_,
+                "CPU Capacity": cpu_cap,
+                "Mem Capacity": mem_cap,
+                "CPU Usage": cpu_usage,
+                "Mem Usage": mem_usage
+            })
+            table.append(cluster_table)
+
+    for i_ in range(N):
+        df = pd.DataFrame(table[i_])
+        print(f"\nSummary Table for Cluster {i_}:")
+        # Using tabulate to pretty-print the DataFrame as a table.
+        print(tabulate(df, headers='keys', tablefmt='psql', showindex=False))
+
+
 else:
     print("No optimal solution found. Problem status:", problem.status)
