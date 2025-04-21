@@ -6,7 +6,7 @@ from tabulate import tabulate
 # -----------------------
 # 1) Problem dimensions (swapped)
 # -----------------------
-N = 3  # number of clusters
+N = 2  # number of clusters
 M = 10 # number of jobs
 K = 4  # number of worker nodes
 T = 4  # number of time slices
@@ -14,57 +14,54 @@ T = 4  # number of time slices
 # -----------------------
 # 2) Input data
 # -----------------------
-# Job memory requirement
-w = [9, 6, 8, 4, 6, 8, 4, 6, 8, 8]  # Memory demand for jobs j=0..M-1
+# CPU and memory demands of each job
+c = [4, 3, 4, 5, 6, 2, 3, 4, 5, 6]  # CPU demand for jobs j=0..1
+e = [9, 6, 8, 4, 6, 8, 4, 6, 8, 8]  # Memory demand for jobs j=0..1
 
-# Job duration
-d = [2, 2, 1, 1, 3, 1, 2, 3, 2, 3]  # Memory demand for jobs j=0..M-1
+# Node capacities (CPU and memory)
+r = [10, 10, 10, 10]  # CPU capacity for nodes k=0..1
+s = [20, 24, 20, 24]  # Memory capacity for nodes k=0..1
 
-# Node memory capacities
-s = [20, 24, 20, 24]  # Memory capacity for nodes k=0..K-1
-
-# c[j][i] = 1 if job j can be scheduled to run on cluster i, else 0
-c = [
-    [1, 1, 1],  # job 0 can be scheduled on cluster 0, 1
-    [1, 1, 1],  # job 0 can be scheduled on cluster 0, 1
-    [1, 1, 1],  # job 0 can be scheduled on cluster 0, 1
-    [1, 1, 0],  # job 0 can be scheduled on cluster 0, 1
-    [1, 1, 0],  # job 0 can be scheduled on cluster 0, 1
-    [0, 1, 1],  # job 0 can be scheduled on cluster 0, 1
-    [0, 1, 1],  # job 0 can be scheduled on cluster 0, 1
-    [0, 0, 1],  # job 0 can be scheduled on cluster 0, 1
-    [0, 0, 1],  # job 0 can be scheduled on cluster 0, 1
-    [0, 0, 1],  # job 0 can be scheduled on cluster 0, 1
-    [0, 0, 1],  # job 0 can be scheduled on cluster 0, 1
+# g[j][t] = 1 if job j is active at time t, else 0
+g = [
+    [1, 1, 0, 0],  # job 0 active at times t=0,1
+    [1, 1, 0, 0],  # job 1 active at times t=0,1
+    [0, 1, 1, 0],  # job 2 active at times t=1,2
+    [0, 1, 1, 1],  # job 3 active at times t=1,2,3
+    [0, 1, 1, 0],  # job 4 active at times t=1,2
+    [0, 1, 1, 1],  # job 5 active at times t=1,2,3
+    [1, 1, 1, 0],  # job 6 active at times t=0,1
+    [0, 0, 1, 0],  # job 7 active at times t=2
+    [0, 0, 1, 1],  # job 8 active at times t=2,3
+    [0, 1, 1, 1],  # job 9 active at times t=1,2,3
 ]
 
+# h[j][i] = 1 if job j is assigned to cluster i, else 0
+# Now, i ranges over clusters (i = 0,..,N-1)
+h = [
+    [1, 0],  # job 0 assigned to cluster 0
+    [1, 0],  # job 1 assigned to cluster 0
+    [1, 0],  # job 2 assigned to cluster 0
+    [1, 0],  # job 3 assigned to cluster 0
+    [1, 0],  # job 4 assigned to cluster 0
+    [1, 0],  # job 5 assigned to cluster 0
+    [0, 1],  # job 6 assigned to cluster 1
+    [0, 1],  # job 7 assigned to cluster 1
+    [0, 1],  # job 8 assigned to cluster 1
+    [0, 1],  # job 9 assigned to cluster 1
+]
 
 # ------------------------------------------------------
-# 3) Decision variables:
+# 3) Decision variables: x[i,k,t] and relocation helpers
 # ------------------------------------------------------
 # x[i,k,t] = 1 if node k is attached to cluster i at time t
+# Here, i indexes clusters (0 to N-1) and k indexes worker nodes (0 to K-1)
 x = cp.Variable((N, K, T), boolean=True)
-
-# y[j,i] = 1 if job j be scheduled to run on cluster i
-y = cp.Variable((M, N), boolean=True)
-
-# z[j,t] = 1 if job j be started to run at time slice t
-z = cp.Variable((M, T), boolean=True)
 
 # -----------------------
 # 4) Constraints
 # -----------------------
 constraints = []
-
-# (A) Job scheduling constraint
-for j_ in range(M):
-    # A job must be scheduled on exactly one cluster
-    constraints.append( cp.sum(y[j,:])==1 ) 
-    # A job must be started exactly once
-    constraints.append( cp.sum(z[j,:])==1 ) 
-    # Job must be completed
-    constraints.append( d[j]==sum(z[j,t] for t in range (max(0,:))) )
-
 
 # (A) Node allocation: each worker node k must be assigned to exactly one cluster i at each time t
 for k_ in range(K):
