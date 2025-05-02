@@ -25,16 +25,17 @@ s = [20, 24, 20, 24]  # Memory capacity for nodes k=0..K-1
 
 # c[j][i] = 1 if job j can be scheduled to run on cluster i, else 0
 c = [
-    [1, 0, 0],  # job 0 be scheduled on cluster 0
-    [1, 0, 0],  # job 1 be scheduled on cluster 0
-    [1, 0, 0],  # job 2 be scheduled on cluster 0
-    [1, 0, 0],  # job 3 be scheduled on cluster 0
-    [1, 0, 0],  # job 4 be scheduled on cluster 0
-    [0, 1, 0],  # job 5 be scheduled on cluster 1
-    [0, 1, 0],  # job 6 be scheduled on cluster 1
-    [0, 1, 0],  # job 7 be scheduled on cluster 1
-    [0, 0, 1],  # job 8 be scheduled on cluster 2
-    [0, 0, 1],  # job 9 be scheduled on cluster 2
+    [1, 1, 1],  # job 0 can be scheduled on cluster 0, 1
+    [1, 1, 1],  # job 0 can be scheduled on cluster 0, 1
+    [1, 1, 1],  # job 0 can be scheduled on cluster 0, 1
+    [1, 1, 0],  # job 0 can be scheduled on cluster 0, 1
+    [1, 1, 0],  # job 0 can be scheduled on cluster 0, 1
+    [0, 1, 1],  # job 0 can be scheduled on cluster 0, 1
+    [0, 1, 1],  # job 0 can be scheduled on cluster 0, 1
+    [0, 0, 1],  # job 0 can be scheduled on cluster 0, 1
+    [0, 0, 1],  # job 0 can be scheduled on cluster 0, 1
+    [0, 0, 1],  # job 0 can be scheduled on cluster 0, 1
+    [0, 0, 1],  # job 0 can be scheduled on cluster 0, 1
 ]
 
 
@@ -44,8 +45,14 @@ c = [
 # x[i,k,t] = 1 if node k is attached to cluster i at time t
 x = cp.Variable((N, K, T), boolean=True)
 
-# y[j,t] = 1 if job j be scheduled to run at timeslice t
-y = cp.Variable((M, T), boolean=True)
+# y[j,i] = 1 if job j be scheduled to run on cluster i
+y = cp.Variable((M, N), boolean=True)
+
+# z[j,t] = 1 if job j be started to run at time slice t
+z = cp.Variable((M, T), boolean=True)
+
+# Calculate a_jt
+a = cp.Variable((M, T), boolean=True)
 
 # Job started time started_j: the time slice index that job start
 job_start = cp.Variable((M), integer=True)
@@ -65,9 +72,15 @@ for j_ in range(M):
     # A job must be scheduled on exactly one cluster
     constraints.append( cp.sum(y[j_,:])==1 ) 
 
+    # A job must be started exactly once
+    constraints.append( cp.sum(z[j_,:])==1 ) 
+
+    # Job must run without interruption
+    for t_ in range(T):
+        constraints.append(a[j_,t_] == cp.sum(z[j_, max(0, t_ - d[j_] + 1):t_]))
+        
     # Job must be completed
-    for t_ in range(T - D[j_] + 1, T):
-        constraint.appen( [y[j_, t_] == 0)] )
+    constraints.append( d[j_]==sum(a[j_,t_] for t_ in range (T))) 
 
 
 
