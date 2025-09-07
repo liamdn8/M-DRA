@@ -1,4 +1,4 @@
-id, name, mano_supported, sriov_supported
-1, cluster_1, 0, 0
-2, cluster_2, 1, 0
-3, cluster_3, 1, 1
+id,name,mano_supported,sriov_supported,node_count
+1, cluster_1, 0,0,6
+2, cluster_2, 1,0,4
+3, cluster_3, 1,1,4
