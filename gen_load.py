@@ -54,7 +54,7 @@ def load_clusters(cluster_file_path: str) -> pd.DataFrame:
     clusters = pd.read_csv(clusters_path)
 
     # Validate required columns
-    required = ["id","name","mano_supported","sriov_supported","node_count","cpu_cap","mem_cap","vf_cap"]
+    required = ["id","name","mano_supported","sriov_supported","node_count","cpu_cap","mem_cap","vf_cap","job_count"]
     miss = [c for c in required if c not in clusters.columns]
     if miss:
         print(f"ERROR: clusters.csv missing columns: {miss}", file=sys.stderr)
@@ -62,13 +62,13 @@ def load_clusters(cluster_file_path: str) -> pd.DataFrame:
     
     # Normalize/validate types
     try:
-        for col in ["id","mano_supported","sriov_supported","cpu_cap","mem_cap","vf_cap"]:
+        for col in ["id","mano_supported","sriov_supported","cpu_cap","mem_cap","vf_cap","job_count"]:
             clusters[col] = clusters[col].astype(int)
     except Exception as e:
         print(f"ERROR: failed to cast required columns to int: {e}", file=sys.stderr)
         sys.exit(1)
 
-    if (clusters["cpu_cap"] < 0).any() or (clusters["mem_cap"] < 0).any() or (clusters["vf_cap"] < 0).any():
+    if (clusters["cpu_cap"] < 0).any() or (clusters["mem_cap"] < 0).any() or (clusters["vf_cap"] < 0).any() or (clusters["job_count"] < 0).any():
         print("ERROR: capacities must be non-negative.", file=sys.stderr)
         sys.exit(1)
 
@@ -79,31 +79,49 @@ def load_clusters(cluster_file_path: str) -> pd.DataFrame:
     return clusters
 
 def build_hot_windows(clusters, T, rng):
+    """
+    Build dynamic hot windows for clusters.
+    - Each hot window is at most 40% of total timeslices.
+    - Random start + length, windows can overlap.
+    - Some cool clusters may get short random spikes.
+    """
     hot = {cid: set() for cid in clusters["id"]}
-    if T < 1 or len(clusters) == 0:
-        return hot
-
     cluster_ids = clusters["id"].tolist()
+    if T < 1 or len(cluster_ids) == 0:
+        return hot, set()
 
-    # randomly select 1..N clusters to be "high load" clusters
-    num_high = int(rng.integers(1, len(cluster_ids) + 1))
-    high_load_clusters = rng.choice(cluster_ids, size=num_high, replace=False)
+    # randomly select how many clusters will go hot
+    num_hot_clusters = int(rng.integers(1, len(cluster_ids) + 1))
+    hot_clusters = rng.choice(cluster_ids, size=num_hot_clusters, replace=False)
 
+    max_len = max(1, int(0.4 * T))  # ≤ 40% of T
+
+    for cid in hot_clusters:
+        # number of hot intervals (1–2 windows per cluster)
+        num_intervals = int(rng.integers(1, 3))
+
+        for _ in range(num_intervals):
+            win_len = int(rng.integers(max(1, int(0.2 * T)), max_len + 1))  # 20%–40%
+            start = int(rng.integers(1, T - win_len + 2))
+            end = start + win_len - 1
+            for t in range(start, end + 1):
+                hot[cid].add(t)
+
+    # some cool clusters may still spike briefly
     for cid in cluster_ids:
-        # 30% chance some clusters never go hot
-        if cid not in high_load_clusters and rng.random() < 0.3:
-            continue
+        if cid not in hot_clusters and rng.random() < 0.3:
+            spike_len = int(rng.integers(1, min(3, T) + 1))
+            spike_start = int(rng.integers(1, T - spike_len + 2))
+            spike_end = spike_start + spike_len - 1
+            for t in range(spike_start, spike_end + 1):
+                hot[cid].add(t)
 
-        # random window length
-        win_len = int(rng.integers(max(1, int(0.3 * T)), max(2, int(0.7 * T)) + 1))
-        start = int(rng.integers(1, T - win_len + 2))
-        end = start + win_len - 1
-        hot[cid] = set(range(start, end + 1))
+    print("\nSelected high load clusters:", hot_clusters)
+    for cid in cluster_ids:
+        print(f"Cluster {cid} hot window: {sorted(hot[cid])}")
 
-    print("\nHigh load clusters (near capacity when hot):", high_load_clusters)
-    print(hot)
+    return hot, set(hot_clusters)
 
-    return hot, set(high_load_clusters)
 
 
 def compute_targets(clusters, T, hot_windows,
@@ -116,8 +134,8 @@ def compute_targets(clusters, T, hot_windows,
     cap_vf  = clusters.set_index("id")["vf_cap"].to_dict()
     sriov_map = clusters.set_index("id")["sriov_supported"].to_dict()
 
+    # raw per-cluster timeslice demand
     cpu_raw, mem_raw, vf_raw = {}, {}, {}
-
     for c in cluster_ids:
         cpu_raw[c] = np.zeros(T, dtype=float)
         mem_raw[c] = np.zeros(T, dtype=float)
@@ -128,47 +146,46 @@ def compute_targets(clusters, T, hot_windows,
             if t in hot_set:
                 cpu_raw[c][t - 1] = hot_frac * cap_cpu[c]
                 mem_raw[c][t - 1] = hot_frac * cap_mem[c]
-                vf_raw[c][t - 1]  = (vf_hot_frac * cap_vf[c]) if sriov_map[c] == 1 else 0.0
+                vf_raw[c][t - 1]  = vf_hot_frac * cap_vf[c] if sriov_map[c] == 1 else 0.0
             else:
                 cpu_raw[c][t - 1] = cool_frac * cap_cpu[c]
                 mem_raw[c][t - 1] = cool_frac * cap_mem[c]
-                vf_raw[c][t - 1]  = (vf_cool_frac * cap_vf[c]) if sriov_map[c] == 1 else 0.0
+                vf_raw[c][t - 1]  = vf_cool_frac * cap_vf[c] if sriov_map[c] == 1 else 0.0
+
+    # final targets after global scaling
+    cpu_target, mem_target, vf_target = {}, {}, {}
+    for c in cluster_ids:
+        cpu_target[c] = np.zeros(T, dtype=int)
+        mem_target[c] = np.zeros(T, dtype=int)
+        vf_target[c]  = np.zeros(T, dtype=int)
 
     total_cpu_cap = sum(cap_cpu.values())
-    cpu_target, mem_target, vf_target = {}, {}, {}
-
-    for c in cluster_ids:
-        cpu_target[c] = np.zeros(T, dtype=float)
-        mem_target[c] = np.zeros(T, dtype=float)
-        vf_target[c]  = np.zeros(T, dtype=float)
 
     for t in range(1, T + 1):
+        # sum of raw demand at this timeslice
         raw_sum = sum(cpu_raw[c][t - 1] for c in cluster_ids)
         cap_limit = global_cap_frac * total_cpu_cap
+
         scale = 1.0
         if raw_sum > cap_limit and raw_sum > 0:
             scale = cap_limit / raw_sum
 
         for c in cluster_ids:
             if high_load_clusters and c in high_load_clusters and t in hot_windows.get(c, set()):
-                # force near capacity
-                cpu_target[c][t - 1] = cap_cpu[c] * 0.95
-                mem_target[c][t - 1] = cap_mem[c] * 0.95
-                vf_target[c][t - 1]  = cap_vf[c] * 0.95 if sriov_map[c] == 1 else 0.0
+                # force cluster near capacity in hot timeslice
+                cpu_target[c][t - 1] = int(round(cap_cpu[c] * 0.95))
+                mem_target[c][t - 1] = int(round(cap_mem[c] * 0.95))
+                vf_target[c][t - 1]  = int(round(cap_vf[c] * 0.95)) if sriov_map[c] == 1 else 0
             else:
-                cpu_target[c][t - 1] = cpu_raw[c][t - 1] * scale
-                mem_target[c][t - 1] = mem_raw[c][t - 1]
-                vf_target[c][t - 1]  = vf_raw[c][t - 1]
+                cpu_target[c][t - 1] = int(round(cpu_raw[c][t - 1] * scale))
+                mem_target[c][t - 1] = int(round(mem_raw[c][t - 1] * scale))
+                vf_target[c][t - 1]  = int(round(vf_raw[c][t - 1] * scale))
 
-    print("\nSample of resource targets after scaling:")
+    # pretty-print
+    print("\n=== Resource targets by timeslice ===")
     for c in cluster_ids:
-        cpu_target[c] = np.rint(cpu_target[c]).astype(int)
-        mem_target[c] = np.rint(mem_target[c]).astype(int)
-        vf_target[c]  = np.rint(vf_target[c]).astype(int)
-
-        # ✅ print as table
-        print(f"\n=== Cluster {c} ===")
-        header = ["t", "CPU", "MEM", "VF"]
+        print(f"\nCluster {c} (cap CPU={cap_cpu[c]}, MEM={cap_mem[c]}, VF={cap_vf[c]}):")
+        header = ["t", "CPU_target", "MEM_target", "VF_target"]
         rows = []
         for t in range(T):
             rows.append([
@@ -177,11 +194,8 @@ def compute_targets(clusters, T, hot_windows,
                 mem_target[c][t],
                 vf_target[c][t] if sriov_map[c] == 1 else "N/A"
             ])
-
-        # pretty-print as aligned table
         col_widths = [max(len(str(val)) for val in col) for col in zip(*([header] + rows))]
         row_format = "  ".join("{:<" + str(width) + "}" for width in col_widths)
-
         print(row_format.format(*header))
         for row in rows:
             print(row_format.format(*row))
@@ -189,30 +203,48 @@ def compute_targets(clusters, T, hot_windows,
     return cpu_target, mem_target, vf_target
 
 
+
 def pack_jobs_from_targets(clusters, T,
                            cpu_target, mem_target, vf_target,
-                           rng, target_jobs):
+                           rng, job_targets, hot_frac):
     """
     Convert per-(cluster,t) targets into jobs.
-    Tries to fill demand with random jobs, then sprinkles extra until reaching target_jobs.
+    Ensures that the sum of job usage matches the target arrays.
     """
+
     cluster_ids = clusters["id"].tolist()
     mano_map = clusters.set_index("id")["mano_supported"].to_dict()
     sriov_map = clusters.set_index("id")["sriov_supported"].to_dict()
 
+    # Copy targets into remaining demand
     rem_cpu = {c: np.array(cpu_target[c], dtype=float) for c in cluster_ids}
     rem_mem = {c: np.array(mem_target[c], dtype=float) for c in cluster_ids}
     rem_vf  = {c: np.array(vf_target[c], dtype=float) for c in cluster_ids}
 
+    cap_cpu = clusters.set_index("id")["cpu_cap"].to_dict()
+    cap_mem = clusters.set_index("id")["mem_cap"].to_dict()
+    cap_vf  = clusters.set_index("id")["vf_cap"].to_dict()
+
     jobs = []
     next_id = 1
+    cluster_job_counts = {cid: 0 for cid in cluster_ids}
 
-    def add_job(cluster_id, start, dur, cpu_amt, mem_amt, vf_amt, mano_req):
-        nonlocal next_id, jobs
+    def add_job(cluster_id, start, dur, cpu_amt, mem_amt, vf_amt, mano_req, hot_frac):
+        nonlocal next_id, jobs, cluster_job_counts
         end = min(T, start + dur - 1)
+
+        # clamp to <= 90% of capacity
+        max_cpu = cap_cpu[c] * hot_frac
+        max_mem = cap_mem[c] * hot_frac
+        max_vf  = cap_vf[c] * hot_frac
+
+        cpu_amt = min(cpu_amt, max_cpu)
+        mem_amt = min(mem_amt, max_mem)
+        vf_amt  = min(vf_amt, max_vf)
+
         jobs.append({
             "id": next_id,
-            "name": "job_%d" % next_id,
+            "name": f"job_{next_id}",
             "cpu_req": int(max(1, round(cpu_amt))),
             "mem_req": int(max(1, round(mem_amt))),
             "vf_req": int(max(0, round(vf_amt))),
@@ -225,68 +257,61 @@ def pack_jobs_from_targets(clusters, T,
         for t in range(start - 1, end):
             rem_cpu[cluster_id][t] = max(0.0, rem_cpu[cluster_id][t] - cpu_amt)
             rem_mem[cluster_id][t] = max(0.0, rem_mem[cluster_id][t] - mem_amt)
-            rem_vf[cluster_id][t]  = max(0.0, rem_vf[cluster_id][t]  - vf_amt)
+            rem_vf[cluster_id][t]  = max(0.0, rem_vf[cluster_id][t] - vf_amt)
+        cluster_job_counts[cluster_id] += 1
         next_id += 1
 
+    # Step 1: fill demand directly from targets
     for c in cluster_ids:
         t = 1
         while t <= T:
-            while t <= T and rem_cpu[c][t - 1] <= 1e-6:
+            if rem_cpu[c][t - 1] <= 1e-6:
                 t += 1
-            if t > T:
-                break
-            t0 = t
-            while t <= T and rem_cpu[c][t - 1] > 1e-6:
-                t += 1
-            seg_len = t - t0
-
-            d = int(rng.integers(1, min(3, seg_len) + 1))
-            seg_min_cpu = float(np.min(rem_cpu[c][t0 - 1:t0 - 1 + d]))
-            seg_min_mem = float(np.min(rem_mem[c][t0 - 1:t0 - 1 + d]))
-            seg_min_vf  = float(np.min(rem_vf[c][t0 - 1:t0 - 1 + d]))
-
-            if seg_min_cpu <= 0:
                 continue
-            frac = float(rng.uniform(0.8, 1.0))
-            cpu_amt = max(1.0, seg_min_cpu * frac)
-            mem_amt = max(1.0, min(seg_min_mem if seg_min_mem > 0 else cpu_amt,
-                                   cpu_amt * rng.uniform(0.8, 1.2)))
-            if sriov_map[c] == 1 and seg_min_vf > 0:
-                vf_amt = max(0.0, min(seg_min_vf, seg_min_vf * rng.uniform(0.3, 0.7)))
+
+            # pick a random duration, bounded by remaining timeslices
+            dur = int(rng.integers(1, min(3, T - t + 1) + 1))
+
+            # job demand = min remaining across window
+            seg_cpu = rem_cpu[c][t - 1:t - 1 + dur]
+            seg_mem = rem_mem[c][t - 1:t - 1 + dur]
+            seg_vf  = rem_vf[c][t - 1:t - 1 + dur]
+
+            cpu_amt = float(np.min(seg_cpu))
+            mem_amt = float(np.min(seg_mem))
+            vf_amt  = float(np.min(seg_vf)) if sriov_map[c] == 1 else 0.0
+
+            # make job slightly random around the target
+            cpu_amt = max(1.0, cpu_amt * rng.uniform(0.9, 1.1))
+            mem_amt = max(1.0, mem_amt * rng.uniform(0.9, 1.1))
+            if sriov_map[c] == 1 and vf_amt > 0:
+                vf_amt = max(0.0, vf_amt * rng.uniform(0.8, 1.2))
             else:
                 vf_amt = 0.0
 
             mano_req = int(rng.integers(0, 2)) if mano_map[c] == 1 else 0
-            add_job(c, t0, d, cpu_amt, mem_amt, vf_amt, mano_req)
+            add_job(c, t, dur, cpu_amt, mem_amt, vf_amt, mano_req, hot_frac)
 
-    rng_cids = clusters["id"].tolist()
-    while len(jobs) < target_jobs and len(rng_cids) > 0:
-        c = int(rng.choice(rng_cids))
-        start = int(rng.integers(1, T + 1))
-        cpu_amt = 1.0
-        mem_amt = 1.0
-        vf_amt  = 0.0
-        mano_req = int(rng.integers(0, 2)) if mano_map[c] == 1 else 0
-        jobs.append({
-            "id": len(jobs) + 1,
-            "name": "job_%d" % (len(jobs) + 1),
-            "cpu_req": int(cpu_amt),
-            "mem_req": int(mem_amt),
-            "vf_req": int(vf_amt),
-            "mano_req": int(mano_req),
-            "avail_start_time": int(start),
-            "deadline": int(start),
-            "duration": 1,
-            "default_cluster": int(c),
-        })
+            # move forward
+            t += dur
 
+    # Step 2: ensure minimum jobs per cluster
+    for c in cluster_ids:
+        while cluster_job_counts[c] < job_targets.get(c, 0):
+            start = int(rng.integers(1, T + 1))
+            add_job(c, start, 1, 1.0, 1.0, 0.0,
+                    int(rng.integers(0, 2)) if mano_map[c] == 1 else 0,
+                    hot_frac)
+
+    # Finalize DataFrame
     df = pd.DataFrame(jobs).sort_values("id").reset_index(drop=True)
-    
     df = df.sort_values(["default_cluster", "id"]).reset_index(drop=True)
     df["id"] = df.index + 1
-    df["name"] = df["id"].apply(lambda x: "job_%d" % x)
-    
+    df["name"] = df["id"].apply(lambda x: f"job_{x}")
+
     return df
+
+
 
 
 def build_load_tables(clusters, jobs_df, T, outdir):
@@ -334,33 +359,98 @@ def build_load_tables(clusters, jobs_df, T, outdir):
     return cluster_load, job_load
 
 
-def plot_cluster_load(clusters, cluster_load, outdir):
+def plot_cluster_load(clusters, cluster_load, targets, outdir, global_cap_frac=0.7):
+    """
+    Plot capacity, target, and actual job load per cluster,
+    plus an extra row at the bottom for the total across all clusters.
+    """
+    cpu_target, mem_target, vf_target = targets
     cid_list = clusters["id"].tolist()
-    fig, axes = plt.subplots(len(cid_list), 3,
-                             figsize=(12, 3 * len(cid_list)),
+
+    # --- aggregate across all clusters ---
+    total_load = cluster_load.groupby("timeslice").sum(numeric_only=True).reset_index()
+    total_cap = {
+        "cpu": clusters["cpu_cap"].sum(),
+        "mem": clusters["mem_cap"].sum(),
+        "vf":  clusters["vf_cap"].sum()
+    }
+
+    # add extra row for totals
+    fig, axes = plt.subplots(len(cid_list) + 1, 3,
+                             figsize=(12, 3 * (len(cid_list) + 1)),
                              sharex=True)
-    if len(cid_list) == 1:
-        axes = np.array([axes])  # shape (1,3)
+    if len(cid_list) + 1 == 1:
+        axes = np.array([axes])
 
-    resources = [("cpu_cap", "cpu_load", "CPU"),
-                 ("mem_cap", "mem_load", "Memory"),
-                 ("vf_cap", "vf_load", "VF")]
+    resources = [
+        ("cpu_cap", "cpu_load", cpu_target, "CPU"),
+        ("mem_cap", "mem_load", mem_target, "Memory"),
+        ("vf_cap", "vf_load", vf_target, "VF"),
+    ]
 
+    # --- per-cluster plots ---
     for i, cid in enumerate(cid_list):
-        for j, (cap_col, load_col, label) in enumerate(resources):
+        for j, (cap_col, load_col, tgt_dict, label) in enumerate(resources):
             ax = axes[i, j]
             df = cluster_load[cluster_load["cluster_id"] == cid]
+
+            cap = df[cap_col].iloc[0]
+            cap_limit = cap * global_cap_frac
+
+            # capacity, target, actual
             ax.plot(df["timeslice"], df[cap_col], label="Capacity", color="black", linestyle="--")
-            ax.plot(df["timeslice"], df[load_col], label="Load", color="blue")
-            ax.set_title("Cluster %s %s" % (cid, label))
+            tgt_series = pd.Series(tgt_dict[cid])
+            ax.plot(df["timeslice"], tgt_series, label="Target", color="green", linestyle=":")
+            ax.plot(df["timeslice"], df[load_col], label="Actual", color="blue")
+
+            # ratio annotation
+            ratios = (df[load_col] / cap_limit).round(2)
+            cell_text = [ratios.tolist()]
+            ax.table(cellText=cell_text,
+                     rowLabels=[f"Load/Cap({global_cap_frac})"],
+                     colLabels=df["timeslice"].tolist(),
+                     loc="bottom", cellLoc="center", rowLoc="center")
+
+            ax.set_title(f"Cluster {cid} {label}")
             ax.set_xlabel("Timeslice")
             if j == 0:
                 ax.set_ylabel("Value")
             if i == 0 and j == 0:
                 ax.legend()
+
+    # --- total (all clusters) plots ---
+    total_targets = {
+        "cpu": np.sum([cpu_target[c] for c in cid_list], axis=0),
+        "mem": np.sum([mem_target[c] for c in cid_list], axis=0),
+        "vf":  np.sum([vf_target[c] for c in cid_list], axis=0),
+    }
+
+    for j, (cap_col, load_col, _, label) in enumerate(resources):
+        ax = axes[len(cid_list), j]
+        cap_key = cap_col.split("_")[0]   # cpu/mem/vf
+        cap_val = total_cap[cap_key]
+        cap_limit = cap_val * global_cap_frac
+
+        ax.plot(total_load["timeslice"], [cap_val] * len(total_load), label="Capacity", color="black", linestyle="--")
+        ax.plot(total_load["timeslice"], total_targets[cap_key], label="Target", color="green", linestyle=":")
+        ax.plot(total_load["timeslice"], total_load[load_col], label="Actual", color="blue")
+
+        ratios = (total_load[load_col] / cap_limit).round(2)
+        cell_text = [ratios.tolist()]
+        ax.table(cellText=cell_text,
+                 rowLabels=[f"Total Load/Cap({global_cap_frac})"],
+                 colLabels=total_load["timeslice"].tolist(),
+                 loc="bottom", cellLoc="center", rowLoc="center")
+
+        ax.set_title(f"ALL Clusters {label}")
+        ax.set_xlabel("Timeslice")
+        if j == 0:
+            ax.set_ylabel("Value")
+
     plt.tight_layout()
     plt.savefig(outdir + "/cluster_load.png", dpi=150)
     plt.close()
+
 
 
 def plot_job_running(jobs_df, outdir):
@@ -414,8 +504,7 @@ def main():
     ap.add_argument("--clusters", required=True, type=str, help="Path to clusters.csv")
     ap.add_argument("--out", default="jobs.csv", type=str, help="Output jobs.csv path")
     ap.add_argument("--timeslices", "-T", type=int, default=12, help="Number of timeslices")
-    ap.add_argument("--seed", type=int, default=42, help="Random seed")
-    ap.add_argument("--global-cap-frac", type=float, default=0.70, help="Global cap fraction of total CPU per timeslice")
+    ap.add_argument("--global-cap-frac", type=float, default=0.50, help="Global cap fraction of total CPU per timeslice")
     ap.add_argument("--hot-frac", type=float, default=0.60, help="Per-cluster hot fraction (before scaling)")
     ap.add_argument("--cool-frac", type=float, default=0.15, help="Per-cluster cool fraction (before scaling)")
     ap.add_argument("--vf-hot-frac", type=float, default=0.15, help="Per-cluster hot VF fraction (SR-IOV only)")
@@ -423,7 +512,7 @@ def main():
     ap.add_argument("--jobs", type=int, default=100, help="Target number of jobs to generate")
     args = ap.parse_args()
 
-    rng = np.random.default_rng(args.seed)
+    rng = np.random.default_rng()
     clusters = load_clusters(Path(args.clusters))
     T = args.timeslices
     if T < 1:
@@ -441,11 +530,13 @@ def main():
         high_load_clusters=high_load_clusters
     )
 
+    job_targets = clusters.set_index("id")["job_count"].to_dict()
     jobs_df = pack_jobs_from_targets(
         clusters, T,
         cpu_target, mem_target, vf_target,
         rng=rng,
-        target_jobs=args.jobs
+        job_targets=job_targets,
+        hot_frac=args.hot_frac
     )
 
     jobs_df.to_csv(args.out + "/jobs.csv", index=False)
@@ -454,7 +545,7 @@ def main():
     cluster_load, job_load = build_load_tables(clusters, jobs_df, T, args.out)
     print("Wrote cluster_load.csv and job_load.csv")
 
-    plot_cluster_load(clusters, cluster_load, args.out)
+    plot_cluster_load(clusters, cluster_load,(cpu_target, mem_target, vf_target), args.out)
     print("Wrote cluster_load.png")
 
     plot_job_running(jobs_df, args.out)
