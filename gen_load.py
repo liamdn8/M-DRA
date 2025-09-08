@@ -83,62 +83,64 @@ def build_hot_windows(clusters, T, rng):
     if T < 1 or len(clusters) == 0:
         return hot
 
-    # largest cluster always hot
-    largest = clusters.sort_values("cpu_cap", ascending=False).iloc[0]["id"]
-    win_len = int(rng.integers(max(1, int(0.4 * T)), max(2, int(0.8 * T)) + 1))
-    start = int(rng.integers(1, T - win_len + 2))
-    end = start + win_len - 1
-    hot[largest] = set(range(start, end + 1))
+    cluster_ids = clusters["id"].tolist()
 
-    # other clusters maybe hot
-    for cid in clusters["id"]:
-        if cid == largest:
+    # randomly select 1..N clusters to be "high load" clusters
+    num_high = int(rng.integers(1, len(cluster_ids) + 1))
+    high_load_clusters = rng.choice(cluster_ids, size=num_high, replace=False)
+
+    for cid in cluster_ids:
+        # 30% chance some clusters never go hot
+        if cid not in high_load_clusters and rng.random() < 0.3:
             continue
-        if rng.random() < 0.3:  # 30% chance stay cool
-            continue
-        win_len = int(rng.integers(max(1, int(0.2 * T)), max(2, int(0.6 * T)) + 1))
+
+        # random window length
+        win_len = int(rng.integers(max(1, int(0.3 * T)), max(2, int(0.7 * T)) + 1))
         start = int(rng.integers(1, T - win_len + 2))
         end = start + win_len - 1
         hot[cid] = set(range(start, end + 1))
-    return hot
+
+    print("\nHigh load clusters (near capacity when hot):", high_load_clusters)
+    print(hot)
+
+    return hot, set(high_load_clusters)
 
 
 def compute_targets(clusters, T, hot_windows,
                     hot_frac, cool_frac, global_cap_frac,
-                    vf_hot_frac, vf_cool_frac):
-    """
-    Build per-cluster per-timeslice targets for CPU, MEM, VF.
-    Then scale all clusters in each timeslice so that total CPU <= global_cap_frac * total_cpu_cap.
-    Return dicts: cpu_target[c][t], mem_target[c][t], vf_target[c][t] (1-based t)
-    """
+                    vf_hot_frac, vf_cool_frac,
+                    high_load_clusters=None):
     cluster_ids = clusters["id"].tolist()
     cap_cpu = clusters.set_index("id")["cpu_cap"].to_dict()
     cap_mem = clusters.set_index("id")["mem_cap"].to_dict()
     cap_vf  = clusters.set_index("id")["vf_cap"].to_dict()
     sriov_map = clusters.set_index("id")["sriov_supported"].to_dict()
 
-    # Pre-scale (raw) targets
-    cpu_raw = {c: np.zeros(T, dtype=float) for c in cluster_ids}
-    mem_raw = {c: np.zeros(T, dtype=float) for c in cluster_ids}
-    vf_raw  = {c: np.zeros(T, dtype=float) for c in cluster_ids}
-
-    mem_per_cpu = {c: (cap_mem[c] / float(cap_cpu[c])) if cap_cpu[c] > 0 else 0.0 for c in cluster_ids}
+    cpu_raw, mem_raw, vf_raw = {}, {}, {}
 
     for c in cluster_ids:
+        cpu_raw[c] = np.zeros(T, dtype=float)
+        mem_raw[c] = np.zeros(T, dtype=float)
+        vf_raw[c]  = np.zeros(T, dtype=float)
+
         hot_set = hot_windows.get(c, set())
         for t in range(1, T + 1):
-            frac = hot_frac if t in hot_set else cool_frac
-            cpu_raw[c][t - 1] = frac * cap_cpu[c]
-            mem_raw[c][t - 1] = frac * cap_cpu[c] * mem_per_cpu[c]
-            vf_frac = vf_hot_frac if t in hot_set else vf_cool_frac
-            vf_raw[c][t - 1] = (vf_frac * cap_vf[c]) if sriov_map[c] == 1 else 0.0
+            if t in hot_set:
+                cpu_raw[c][t - 1] = hot_frac * cap_cpu[c]
+                mem_raw[c][t - 1] = hot_frac * cap_mem[c]
+                vf_raw[c][t - 1]  = (vf_hot_frac * cap_vf[c]) if sriov_map[c] == 1 else 0.0
+            else:
+                cpu_raw[c][t - 1] = cool_frac * cap_cpu[c]
+                mem_raw[c][t - 1] = cool_frac * cap_mem[c]
+                vf_raw[c][t - 1]  = (vf_cool_frac * cap_vf[c]) if sriov_map[c] == 1 else 0.0
 
     total_cpu_cap = sum(cap_cpu.values())
-    cpu_target = {c: np.zeros(T, dtype=float) for c in cluster_ids}
-    mem_target = {c: np.zeros(T, dtype=float) for c in cluster_ids}
-    vf_target  = {c: np.zeros(T, dtype=float) for c in cluster_ids}
+    cpu_target, mem_target, vf_target = {}, {}, {}
 
-    largest = clusters.sort_values("cpu_cap", ascending=False).iloc[0]["id"]
+    for c in cluster_ids:
+        cpu_target[c] = np.zeros(T, dtype=float)
+        mem_target[c] = np.zeros(T, dtype=float)
+        vf_target[c]  = np.zeros(T, dtype=float)
 
     for t in range(1, T + 1):
         raw_sum = sum(cpu_raw[c][t - 1] for c in cluster_ids)
@@ -148,15 +150,41 @@ def compute_targets(clusters, T, hot_windows,
             scale = cap_limit / raw_sum
 
         for c in cluster_ids:
-            # largest cluster in hot window → do not scale
-            if c == largest and t in hot_windows.get(c, set()):
-                cpu_target[c][t - 1] = cap_cpu[c] * 0.95  # 95% of capacity
+            if high_load_clusters and c in high_load_clusters and t in hot_windows.get(c, set()):
+                # force near capacity
+                cpu_target[c][t - 1] = cap_cpu[c] * 0.95
                 mem_target[c][t - 1] = cap_mem[c] * 0.95
                 vf_target[c][t - 1]  = cap_vf[c] * 0.95 if sriov_map[c] == 1 else 0.0
             else:
                 cpu_target[c][t - 1] = cpu_raw[c][t - 1] * scale
-                mem_target[c][t - 1] = mem_raw[c][t - 1] * scale
-                vf_target[c][t - 1]  = vf_raw[c][t - 1] * scale
+                mem_target[c][t - 1] = mem_raw[c][t - 1]
+                vf_target[c][t - 1]  = vf_raw[c][t - 1]
+
+    print("\nSample of resource targets after scaling:")
+    for c in cluster_ids:
+        cpu_target[c] = np.rint(cpu_target[c]).astype(int)
+        mem_target[c] = np.rint(mem_target[c]).astype(int)
+        vf_target[c]  = np.rint(vf_target[c]).astype(int)
+
+        # ✅ print as table
+        print(f"\n=== Cluster {c} ===")
+        header = ["t", "CPU", "MEM", "VF"]
+        rows = []
+        for t in range(T):
+            rows.append([
+                t + 1,
+                cpu_target[c][t],
+                mem_target[c][t],
+                vf_target[c][t] if sriov_map[c] == 1 else "N/A"
+            ])
+
+        # pretty-print as aligned table
+        col_widths = [max(len(str(val)) for val in col) for col in zip(*([header] + rows))]
+        row_format = "  ".join("{:<" + str(width) + "}" for width in col_widths)
+
+        print(row_format.format(*header))
+        for row in rows:
+            print(row_format.format(*row))
 
     return cpu_target, mem_target, vf_target
 
@@ -402,14 +430,15 @@ def main():
         print("ERROR: timeslices must be >= 1", file=sys.stderr)
         sys.exit(1)
 
-    hot_windows = build_hot_windows(clusters, T, rng)
+    hot_windows, high_load_clusters = build_hot_windows(clusters, T, rng)
     cpu_target, mem_target, vf_target = compute_targets(
         clusters, T, hot_windows,
         hot_frac=args.hot_frac,
         cool_frac=args.cool_frac,
         global_cap_frac=args.global_cap_frac,
         vf_hot_frac=args.vf_hot_frac,
-        vf_cool_frac=args.vf_cool_frac
+        vf_cool_frac=args.vf_cool_frac,
+        high_load_clusters=high_load_clusters
     )
 
     jobs_df = pack_jobs_from_targets(
