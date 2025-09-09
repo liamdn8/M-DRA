@@ -115,10 +115,9 @@ def main():
     ap = argparse.ArgumentParser(description="Generate nodes.csv from clusters.csv")
     ap.add_argument("--clusters", "-c", required=True, type=str, help="Path to clusters.csv")
     ap.add_argument("--out", "-o", default="nodes.csv", type=str, help="Output folder path")
-    ap.add_argument("--seed", default=42, type=int, help="Random seed")
     args = ap.parse_args()
 
-    rng = np.random.default_rng(args.seed)
+    rng = np.random.default_rng()
 
     clusters = load_clusters(args.clusters)
 
@@ -156,8 +155,8 @@ def main():
         how="left"
     ).drop(columns=["default_cluster"])
 
-    pd_write_file(clusters, args.out + "/clusters.csv")
-    pd_write_file(nodes, args.out + "/nodes.csv")
+    pd_write_file(clusters, args.out + "/clusters_cap.csv")
+    pd_write_file(nodes, args.out + "/nodes_cap.csv")
 
 
 if __name__ == "__main__":
