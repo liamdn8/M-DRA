@@ -5,6 +5,7 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import cvxpy as cp
 
 """
 solver_x.py - Generate output files for the solver
@@ -35,7 +36,7 @@ Output:
   solver_input/sol_jobs.csv (same as input jobs.csv)
 
 Usage:
-  python solver_x.py --clusters path/to/clusters.csv --nodes path/to/nodes.csv --jobs path/to/jobs.csv --timeslices 10 --out solver_input
+  python solver_x.py --clusters data/sample-0/clusters.csv --nodes data/sample-0/nodes.csv --jobs data/sample-0/jobs.csv --out data/sample-0/
 """
 
 def load_clusters(cluster_file_path: str) -> pd.DataFrame:
@@ -61,7 +62,7 @@ def load_clusters(cluster_file_path: str) -> pd.DataFrame:
 
     # Validate required columns
     required = ["id","name","mano_supported","sriov_supported"]
-    miss = [c for c in required if c not in clusters.columns]
+    miss = [col for col in required if col not in clusters.columns]
     if miss:
         print(f"ERROR: {cluster_file_path} missing columns: {miss}", file=sys.stderr)
         sys.exit(1)
@@ -93,7 +94,7 @@ def load_nodes(node_file_path: str) -> pd.DataFrame:
 
     # Validate required columns
     required = ["id","default_cluster","cpu_cap","mem_cap","vf_cap"]
-    miss = [c for c in required if c not in nodes.columns]
+    miss = [col for col in required if col not in nodes.columns]
     if miss:
         print(f"ERROR: {node_file_path} missing columns: {miss}", file=sys.stderr)
         sys.exit(1)
@@ -116,7 +117,7 @@ def load_nodes(node_file_path: str) -> pd.DataFrame:
 
     return nodes
 
-def load_jobs(job_file_path: str) -> (pd.DataFrame, int):
+def load_jobs(job_file_path: str) -> tuple[pd.DataFrame, int]:
     jobs_path = Path(job_file_path)
     if not jobs_path.exists():
         print(f"ERROR: job file path {job_file_path} not found", file=sys.stderr)
@@ -126,7 +127,7 @@ def load_jobs(job_file_path: str) -> (pd.DataFrame, int):
 
     # Validate required columns
     required = ["id","cpu_req","mem_req","vf_req", "start_time","duration"]
-    miss = [c for c in required if c not in jobs.columns]
+    miss = [col for col in required if col not in jobs.columns]
     if miss:
         print(f"ERROR: {job_file_path} missing columns: {miss}", file=sys.stderr)
         sys.exit(1)
@@ -338,8 +339,8 @@ def main():
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    pd_write_file(clusters, out_dir + "/sol_clusters.csv")
-    pd_write_file(nodes, out_dir + "/sol_nodes.csv")
+    # pd_write_file(clusters, out_dir + "/sol_clusters.csv")
+    # pd_write_file(nodes, out_dir + "/sol_nodes.csv")
     print("Solver input files generated successfully.")
 
     # --------------------------------
@@ -350,7 +351,7 @@ def main():
         jobs.at[j, "start_time"] + jobs.at[j, "duration"] * cp.sum(x[j, :])
         for j in range(len(jobs))
     ]
-    makespan = cp.max(completion_times)
+    makespan = cp.min(sum(completion_times))
     objective = cp.Minimize(makespan)
     problem = cp.Problem(objective, constraints)
     problem.solve(solver=cp.GLPK_MI)
