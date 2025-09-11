@@ -11,3 +11,4 @@ id,jobs_name,default_cluster,cpu_req,mem_req,vf_req,mano_req,start_time,duration
 9,job_8,1,32,56,0,1,15,10
 10,job_9,2,40,72,24,1,15,20
 11,job_10,2,44,80,32,1,18,25
+12,job_10,0,24,80,0,1,20,25
