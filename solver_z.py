@@ -7,6 +7,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import cvxpy as cp
 
+from solver_helper import load_clusters, load_nodes, load_jobs, write_solution_files, plot_solution
+
 """
 solver_x.py - Generate output files for the solver
 ===============================================================================
@@ -38,125 +40,6 @@ Output:
 Usage:
   python solver_z.py --clusters data/sample-0/clusters.csv --nodes data/sample-0/nodes.csv --jobs data/sample-0/jobs.csv --out data/sample-0/solver_y
 """
-
-def load_clusters(cluster_file_path: str) -> pd.DataFrame:
-
-    # ----------------------------------
-    # Load input data for clusters:
-    # The input CSV file should have the following columns:
-    # - id:     unique integer identifier for the cluster (e.g., 1)
-    # - name:   human-readable name for the cluster (e.g., clusterA)
-    # - mano_supported: 1 if MANO is supported, 0 otherwise
-    # - sriov_supported: 1 if SR-IOV is supported, 0 otherwise
-    # - cpu_cap: total vCPU capacity of the cluster (integer, non-negative)
-    # - mem_cap: total memory capacity of the cluster in GiB (integer, non-negative)
-    # - vf_cap: total number of virtual functions (VFs) available (integer, non-negative)
-    # ----------------------------------
-
-    clusters_path = Path(cluster_file_path)
-    if not clusters_path.exists():
-        print(f"ERROR: cluster file path {cluster_file_path} not found", file=sys.stderr)
-        sys.exit(1)
-
-    clusters = pd.read_csv(clusters_path)
-
-    # Validate required columns
-    required = ["id","name","mano_supported","sriov_supported"]
-    miss = [col for col in required if col not in clusters.columns]
-    if miss:
-        print(f"ERROR: {cluster_file_path} missing columns: {miss}", file=sys.stderr)
-        sys.exit(1)
-    
-    # Normalize/validate types
-    try:
-        for col in ["id","mano_supported","sriov_supported"]:
-            clusters[col] = clusters[col].astype(int)
-    except Exception as e:
-        print(f"ERROR: failed to cast required columns to int: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    if clusters.empty:
-        print(f"ERROR: {cluster_file_path} has no rows.", file=sys.stderr)
-        sys.exit(1)
-
-    return clusters
-
-
-def load_nodes(node_file_path: str) -> pd.DataFrame:
-
-
-    nodes_path = Path(node_file_path)
-    if not nodes_path.exists():
-        print(f"ERROR: node file path {node_file_path} not found", file=sys.stderr)
-        sys.exit(1)
-
-    nodes = pd.read_csv(nodes_path)
-
-    # Validate required columns
-    required = ["id","default_cluster","cpu_cap","mem_cap","vf_cap"]
-    miss = [col for col in required if col not in nodes.columns]
-    if miss:
-        print(f"ERROR: {node_file_path} missing columns: {miss}", file=sys.stderr)
-        sys.exit(1)
-    
-    # Normalize/validate types
-    try:
-        for col in ["id","default_cluster","cpu_cap","mem_cap","vf_cap"]:
-            nodes[col] = nodes[col].astype(int)
-    except Exception as e:
-        print(f"ERROR: failed to cast required columns to int: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    if (nodes["cpu_cap"] < 0).any() or (nodes["mem_cap"] < 0).any() or (nodes["vf_cap"] < 0).any():
-        print("ERROR: requests must be non-negative.", file=sys.stderr)
-        sys.exit(1)
-
-    if nodes.empty:
-        print(f"ERROR: {node_file_path} has no rows.", file=sys.stderr)
-        sys.exit(1)
-
-    return nodes
-
-def load_jobs(job_file_path: str) -> tuple[pd.DataFrame, int]:
-    jobs_path = Path(job_file_path)
-    if not jobs_path.exists():
-        print(f"ERROR: job file path {job_file_path} not found", file=sys.stderr)
-        sys.exit(1)
-
-    jobs = pd.read_csv(jobs_path)
-
-    # Validate required columns
-    required = ["id","cpu_req","mem_req","vf_req", "start_time","duration","default_cluster"]
-    miss = [col for col in required if col not in jobs.columns]
-    if miss:
-        print(f"ERROR: {job_file_path} missing columns: {miss}", file=sys.stderr)
-        sys.exit(1)
-    
-    # Normalize/validate types
-    try:
-        for col in ["id","cpu_req","mem_req","vf_req", "start_time","duration","default_cluster"]:
-            jobs[col] = jobs[col].astype(int)
-    except Exception as e:
-        print(f"ERROR: failed to cast required columns to int: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    if (jobs["cpu_req"] < 0).any() or (jobs["mem_req"] < 0).any() or (jobs["vf_req"] < 0).any():
-        print("ERROR: requests must be non-negative.", file=sys.stderr)
-        sys.exit(1)
-
-    if jobs.empty:
-        print(f"ERROR: {job_file_path} has no rows.", file=sys.stderr)
-        sys.exit(1)
-
-    timeslices = max(jobs["start_time"] + jobs["duration"])
-
-    return jobs, timeslices
-
-
-def pd_write_file(data: list, filePath: str):
-    out_path = Path(filePath)
-    data.to_csv(out_path, index=False)
-    print(f"Wrote {filePath}: {out_path.resolve()} (rows={len(data)})")
 
 
 def write_solution_files(clusters, nodes, jobs, x_known, y_known, z, out_dir):
