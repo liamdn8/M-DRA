@@ -73,23 +73,23 @@ def main():
     #
     x = cp.Variable((len(jobs), len(clusters)), boolean=True)
 
-    # job is running at time slice t
-    # y = 1 if job j is running at time t, 0 otherwise
+    # node to cluster assignment
+    # y = 1 if node k is assigned to cluster c at time t, 0 otherwise
     # on this case, y is known and should be fixed
-    y_known = np.zeros((len(jobs), len(timeslices)), dtype=int)
+    y_known = np.zeros((len(nodes), len(clusters), len(timeslices)), dtype=int)
 
+    for k in range(len(nodes)):
+        for t in range(len(timeslices)):
+            y_known[k, nodes.at[k, "default_cluster"], t] = 1
+
+    # job j runs at time t
+    # on this case, job start and duration are known and should be fixed
+    e = np.zeros((len(jobs), len(timeslices)), dtype=int)
     for j in range(len(jobs)):
         start = jobs.at[j, "start_time"]
         duration = jobs.at[j, "duration"]
-        y_known[j, start:start+duration] = 1
-
-    # node is assigned to cluster c at time slice t
-    # z = 1 if node n is assigned to cluster c at time t, 0 otherwise
-    # on this case, z is known and should be fixed
-    z_known = np.zeros((len(nodes), len(clusters), len(timeslices)), dtype=int)
-    for n in range(len(nodes)):
-        for t in range(len(timeslices)):
-            z_known[n, nodes.at[n, "default_cluster"], t] = 1
+        for t in range(start, min(start + duration, len(timeslices))):
+            e[j, t] = 1
 
     # --------------------------------
     # Constraints
@@ -103,16 +103,16 @@ def main():
     # Cluster capacity constraints at each time slice
     for c in range(len(clusters)):
         for t in range(len(timeslices)):
-            cpu_used = cp.sum([
-                jobs.at[j, "cpu_req"] * y_known[j, t] * x[j, c]
+            cpu_req = cp.sum([
+                jobs.at[j, "cpu_req"] * e[j, t] * x[j, c]
                 for j in range(len(jobs))
             ])
-            mem_used = cp.sum([
-                jobs.at[j, "mem_req"] * y_known[j, t] * x[j, c]
+            mem_req = cp.sum([
+                jobs.at[j, "mem_req"] * e[j, t] * x[j, c]
                 for j in range(len(jobs))
             ])
-            vf_used = cp.sum([
-                jobs.at[j, "vf_req"] * y_known[j, t] * x[j, c]
+            vf_req = cp.sum([
+                jobs.at[j, "vf_req"] * e[j, t] * x[j, c]
                 for j in range(len(jobs))
             ])
 
@@ -129,9 +129,9 @@ def main():
                 for n in range(len(nodes))
             ])
 
-            constraints.append(cpu_used <= cpu_cap)
-            constraints.append(mem_used <= mem_cap)
-            constraints.append(vf_used <= vf_cap)
+            constraints.append(cpu_req <= cpu_cap)
+            constraints.append(mem_req <= mem_cap)
+            constraints.append(vf_req <= vf_cap)
 
     # MANO support constraints
     for c in range(len(clusters)):
