@@ -53,8 +53,6 @@ def main():
     ap.add_argument("--out", "-o", default="solver_input", type=str, help="Output folder path")
     args = ap.parse_args()
 
-    rng = np.random.default_rng()
-
     # ----------------------------------
     # Load input data
     # ----------------------------------
@@ -73,14 +71,10 @@ def main():
     #
     x = cp.Variable((len(jobs), len(clusters)), boolean=True)
 
-    # node to cluster assignment
-    # y = 1 if node k is assigned to cluster c at time t, 0 otherwise
-    # on this case, y is known and should be fixed
-    y_known = np.zeros((len(nodes), len(clusters), len(timeslices)), dtype=int)
-
-    for k in range(len(nodes)):
-        for t in range(len(timeslices)):
-            y_known[k, nodes.at[k, "default_cluster"], t] = 1
+    # node is assigned to cluster c at time slice t
+    # y = 1 if node n is assigned to cluster c at time t, 0 otherwise
+    # 
+    y = cp.Variable((len(nodes), len(clusters), len(timeslices)), boolean=True)
 
     # job j runs at time t
     # on this case, job start and duration are known and should be fixed
@@ -100,6 +94,11 @@ def main():
     for j in range(len(jobs)):
         constraints.append(cp.sum(x[j, :]) == 1)
 
+    # Node assignment constraints: each node assigned to exactly one cluster at each time slice
+    for k in range(len(nodes)):
+        for t in range(len(timeslices)):
+            constraints.append(cp.sum(y[k, :, t]) == 1)
+
     # Cluster capacity constraints at each time slice
     for c in range(len(clusters)):
         for t in range(len(timeslices)):
@@ -117,15 +116,15 @@ def main():
             ])
 
             cpu_cap = cp.sum([
-                nodes.at[n, "cpu_cap"] * y_known[n, c, t]
+                nodes.at[n, "cpu_cap"] * y[n, c, t]
                 for n in range(len(nodes))
             ])
             mem_cap = cp.sum([
-                nodes.at[n, "mem_cap"] * y_known[n, c, t]
+                nodes.at[n, "mem_cap"] * y[n, c, t]
                 for n in range(len(nodes))
             ])
             vf_cap = cp.sum([
-                nodes.at[n, "vf_cap"] * y_known[n, c, t] * clusters.at[c, "sriov_supported"]
+                nodes.at[n, "vf_cap"] * y[n, c, t] * clusters.at[c, "sriov_supported"]
                 for n in range(len(nodes))
             ])
 
@@ -152,22 +151,34 @@ def main():
     print("Solver input files generated successfully.")
 
     # --------------------------------
-    # Objective function: minimize job relocation cost
+    # Objective function: minimize jobs re-location
     # --------------------------------
-    # alpha_j: fixed cost to relocate job j (can be set to 1 for all jobs or customized)
-    # If jobs.csv has a column 'relocation_cost', use it; otherwise, default to 1
+    # Minimize the job relocations (job moving between clusters)
     if "relocation_cost" in jobs.columns:
         alpha = jobs["relocation_cost"].values
     else:
         alpha = np.ones(len(jobs))
 
     # Relocation cost: sum over jobs of alpha_j * (1 - x[j, c_default])
-    relocation_cost = cp.sum([
+    job_relocation_cost = cp.sum([
         alpha[j] * (1 - x[j, clusters.index[clusters["id"] == jobs.at[j, "default_cluster"]][0]])
         for j in range(len(jobs))
     ])
 
-    objective = cp.Minimize(relocation_cost)
+    if "relocation_cost" in nodes.columns:
+        gamma = nodes["relocation_cost"].values
+    else:
+        gamma = np.ones(len(nodes))
+
+    # Relocation cost: sum over nodes and timeslices of gamma_k * (1 - sum_c y[k, c, t] * y[k, c, t-1])
+    node_relocation_cost = cp.sum([
+        gamma[k] * cp.abs(y[k, c, t] - y[k, c, t-1])
+        for k in range(len(nodes))
+        for c in range(len(clusters))
+        for t in range(1, len(timeslices))
+    ]) / 2  # each move counted twice
+
+    objective = cp.Minimize(job_relocation_cost + node_relocation_cost)
 
     problem = cp.Problem(objective, constraints)
     problem.solve(solver=cp.SCIP)
@@ -184,26 +195,22 @@ def main():
         cost = alpha[j] * relocated
         print(f"- Job {jobs.at[j, 'id']} assigned to Cluster {clusters.at[assigned_cluster, 'id']} (default: {jobs.at[j, 'default_cluster']}), relocation cost: {cost}")
 
-    # print("\n=== Cluster loads per timeslice ===")
-    # for c in range(len(clusters)):
-    #     for t in range(len(timeslices)):
-    #         jobs_on_c = int(np.sum([
-    #             x.value[j, c] * e[j, t]
-    #             for j in range(len(jobs))
-    #         ]))
-    #         if jobs_on_c > 0:
-    #             print(f"- Cluster {clusters.at[c, 'id']} at time {t}: {jobs_on_c} jobs")
+    print ("\n=== Node allocations per timeslice ===")
+    for n in range(len(nodes)):
+        for c in range(len(clusters)):
+            for t in range(len(timeslices)):
+                if y[n, c, t].value > 0:
+                    print(f"- Node {nodes.at[n, 'id']} assigned to Cluster {clusters.at[c, 'id']} at time {t}")
 
     # print ("\n=== Node allocations per timeslice ===")
     # for n in range(len(nodes)):
     #     for c in range(len(clusters)):
     #         for t in range(len(timeslices)):
-    #             if y_known[n, c, t] > 0:
+    #             if y[n, c, t].value > 0:
     #                 print(f"- Node {nodes.at[n, 'id']} assigned to Cluster {clusters.at[c, 'id']} at time {t}")
 
-    print(f"\nOptimal relocations = {problem.value}\n")
-
-    write_solution_files(timeslices, clusters, nodes, jobs, x, y_known, e, out_dir)
+    print(f"Optimal relocations = {problem.value}\n")
+    write_solution_files(timeslices, clusters, nodes, jobs, x, y, e, out_dir)
     print("Solution files and plots generated.")
 
 
