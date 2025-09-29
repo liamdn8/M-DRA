@@ -1,0 +1,21 @@
+Solver input files generated successfully.
+Solver status: optimal
+
+=== Job assignments to clusters ===
+- Job 0 assigned to Cluster 1 (default: 0), relocation cost: 3
+- Job 1 assigned to Cluster 0 (default: 0), relocation cost: 0
+- Job 2 assigned to Cluster 1 (default: 0), relocation cost: 4
+- Job 3 assigned to Cluster 0 (default: 0), relocation cost: 0
+- Job 4 assigned to Cluster 0 (default: 0), relocation cost: 0
+- Job 5 assigned to Cluster 1 (default: 1), relocation cost: 0
+- Job 6 assigned to Cluster 1 (default: 1), relocation cost: 0
+- Job 7 assigned to Cluster 1 (default: 1), relocation cost: 0
+- Job 8 assigned to Cluster 1 (default: 1), relocation cost: 0
+- Job 9 assigned to Cluster 1 (default: 1), relocation cost: 0
+- Job 10 assigned to Cluster 2 (default: 2), relocation cost: 0
+- Job 11 assigned to Cluster 2 (default: 2), relocation cost: 0
+- Job 12 assigned to Cluster 1 (default: 0), relocation cost: 6
+
+Optimal relocations = 13.0
+
+Solution files and plots generated.
