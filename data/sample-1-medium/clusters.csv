@@ -1,0 +1,5 @@
+id,name,mano_supported,sriov_supported
+1,cluster_1,1,1
+2,cluster_2,1,0
+3,cluster_3,0,1
+4,cluster_4,0,0

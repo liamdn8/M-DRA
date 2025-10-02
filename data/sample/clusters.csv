@@ -1,4 +1,0 @@
-id,name,mano_supported,sriov_supported,node_count,cpu_cap,mem_cap,vf_cap,job_count
-1, cluster_1,0,0,6,72,152,0,50
-2, cluster_2,1,0,4,240,640,0,15
-3, cluster_3,1,1,4,352,960,224,5

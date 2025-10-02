@@ -1,0 +1,4 @@
+Solver,Min_Margin,Margin_1.0,Margin_0.9,Margin_0.8,Margin_0.7,Margin_0.6,Margin_0.5
+solver_x,0.45,✅ 0.0,✅ 0.0,✅ 0.0,✅ 0.0,✅ 0.0,✅ 6.0
+solver_y,0.35,✅ 0.0,✅ 0.0,✅ 0.0,✅ 0.0,✅ 0.0,✅ 3.0
+solver_xy,0.3,✅ 0.0,✅ 0.0,✅ 0.0,✅ 0.0,✅ 0.0,✅ 3.000000000000001
