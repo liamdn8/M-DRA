@@ -435,103 +435,280 @@ class SolverComparator:
         ax.grid(True, alpha=0.3)
     
     def generate_markdown_report(self):
-        """Generate markdown report."""
+        """Generate enhanced markdown report."""
         
         md_file = self.output_dir / f"{self.dataset_name}_solver_comparison.md"
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
         
         with open(md_file, 'w') as f:
-            f.write(f"# Solver Comparison Report: {self.dataset_name}\n\n")
-            f.write(f"**Test Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            # Header
+            f.write(f"# 🔧 M-DRA Solver Comparison Report\n\n")
+            f.write(f"**Dataset:** `{self.dataset_name}`  \n")
+            f.write(f"**Generated:** {timestamp}  \n")
+            f.write(f"**Margin Range:** {max(self.margins):.2f} → {min(self.margins):.2f} (step: {abs(self.margins[1] - self.margins[0]):.2f})  \n")
+            f.write(f"**Total Tests:** {sum(len(self.results.get(s, {})) for s in self.solvers)}  \n\n")
+            f.write("---\n\n")
             
             # Executive Summary
-            f.write("## Executive Summary\n\n")
+            f.write("## 🎯 Executive Summary\n\n")
             
             feasible_solvers = [s for s in self.solvers if self.min_margins.get(s) is not None]
             if feasible_solvers:
+                # Find best solver (lowest minimum margin)
                 best_solver = min(feasible_solvers, key=lambda s: self.min_margins[s])
-                f.write(f"- **Best Solver:** solver_{best_solver} (min margin: {self.min_margins[best_solver]:.2f})\n")
-                f.write(f"- **Feasible Solvers:** {len(feasible_solvers)}/3\n")
-                f.write(f"- **Margin Range Tested:** {max(self.margins):.2f} - {min(self.margins):.2f}\n\n")
+                best_margin = self.min_margins[best_solver]
+                
+                # Find most robust solver (also lowest minimum margin)
+                most_robust = min(feasible_solvers, key=lambda s: self.min_margins[s])
+                robust_margin = self.min_margins[most_robust]
+                
+                f.write(f"### ✅ Success Summary\n\n")
+                f.write(f"- **🏆 Best Solver:** `solver_{best_solver}` (minimum margin: **{best_margin:.2f}**)\n")
+                f.write(f"- **🛡️ Most Robust:** `solver_{most_robust}` (works down to: **{robust_margin:.2f}**)\n") 
+                f.write(f"- **📊 Success Rate:** {len(feasible_solvers)}/3 solvers found feasible solutions\n")
+                f.write(f"- **📈 Feasibility Range:** {min(self.min_margins[s] for s in feasible_solvers):.2f} - 1.00\n\n")
+                
+                # Quick recommendation
+                f.write(f"### 💡 Quick Recommendation\n\n")
+                f.write(f"For **optimal performance**, use `solver_{best_solver}` with margin ≥ **{best_margin:.2f}**\n\n")
+                
             else:
-                f.write("- **Result:** No solver found feasible solutions\n\n")
+                f.write(f"### ❌ No Feasible Solutions\n\n")
+                f.write("- No solver could find feasible solutions in the tested margin range\n")
+                f.write("- Consider increasing margins above 1.0 or reviewing dataset constraints\n\n")
             
-            # Minimum Margins
-            f.write("## Minimum Feasible Margins\n\n")
-            f.write("| Solver | Minimum Margin | Status |\n")
-            f.write("|--------|----------------|--------|\n")
+            f.write("---\n\n")
             
-            for solver in self.solvers:
+            # Minimum Margins Table
+            f.write("## 📊 Minimum Feasible Margins\n\n")
+            f.write("| Solver | Minimum Margin | Status | Performance Rating |\n")
+            f.write("|--------|----------------|--------|-------------------|\n")
+            
+            # Sort solvers by minimum margin (best first)
+            sorted_solvers = sorted(self.solvers, 
+                                  key=lambda s: self.min_margins.get(s, float('inf')))
+            
+            for i, solver in enumerate(sorted_solvers):
                 min_margin = self.min_margins.get(solver)
                 if min_margin is not None:
-                    f.write(f"| solver_{solver} | {min_margin:.2f} | ✅ Feasible |\n")
+                    # Performance rating
+                    if i == 0:
+                        rating = "🥇 Best"
+                    elif i == 1:
+                        rating = "🥈 Good" 
+                    else:
+                        rating = "🥉 Fair"
+                    
+                    f.write(f"| `solver_{solver}` | **{min_margin:.2f}** | ✅ Feasible | {rating} |\n")
                 else:
-                    f.write(f"| solver_{solver} | N/A | ❌ No feasible solution |\n")
+                    f.write(f"| `solver_{solver}` | N/A | ❌ No solution | ⛔ Failed |\n")
             
             f.write("\n")
             
-            # Detailed Results Section
-            f.write("## Detailed Results\n\n")
+            # Performance comparison at key margins
+            if feasible_solvers:
+                f.write("## ⚡ Performance Analysis\n\n")
+                
+                key_margins = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5]
+                available_margins = [m for m in key_margins if any(
+                    m in self.results.get(s, {}) for s in feasible_solvers
+                )]
+                
+                if available_margins:
+                    f.write("### Comparative Performance at Key Margins\n\n")
+                    
+                    for margin in available_margins:
+                        f.write(f"#### Margin {margin:.1f}\n\n")
+                        f.write("| Solver | Status | Optimal Value | Execution Time | Efficiency |\n")
+                        f.write("|--------|--------|---------------|----------------|------------|\n")
+                        
+                        margin_results = []
+                        for solver in self.solvers:
+                            if margin in self.results.get(solver, {}):
+                                result = self.results[solver][margin]
+                                if result.get('success') and result.get('feasible'):
+                                    optimal = result.get('optimal_value', 0)
+                                    time_taken = result.get('execution_time', 0)
+                                    margin_results.append((solver, optimal, time_taken))
+                        
+                        # Sort by optimal value (lower is better)
+                        margin_results.sort(key=lambda x: x[1])
+                        
+                        for i, (solver, optimal, time_taken) in enumerate(margin_results):
+                            # Efficiency rating
+                            if i == 0:
+                                efficiency = "🚀 Excellent"
+                            elif i == 1:
+                                efficiency = "⚡ Good"
+                            else:
+                                efficiency = "📈 Adequate"
+                            
+                            # Time rating
+                            if time_taken < 1.0:
+                                time_rating = f"🏃 {time_taken:.2f}s"
+                            elif time_taken < 5.0:
+                                time_rating = f"🚶 {time_taken:.2f}s"
+                            else:
+                                time_rating = f"🐌 {time_taken:.2f}s"
+                            
+                            f.write(f"| `solver_{solver}` | ✅ Feasible | {optimal:.2f} | {time_rating} | {efficiency} |\n")
+                        
+                        # Add infeasible solvers
+                        for solver in self.solvers:
+                            if margin in self.results.get(solver, {}):
+                                result = self.results[solver][margin]
+                                if result.get('success') and not result.get('feasible'):
+                                    f.write(f"| `solver_{solver}` | ❌ Infeasible | N/A | {result.get('execution_time', 0):.2f}s | ⛔ Failed |\n")
+                        
+                        f.write("\n")
             
-            for solver in self.solvers:
-                f.write(f"### solver_{solver}\n\n")
+            f.write("---\n\n")
+            
+            # Detailed Results Section
+            f.write("## 📋 Detailed Results by Solver\n\n")
+            
+            for solver in sorted_solvers:
+                f.write(f"### 🔧 `solver_{solver}`\n\n")
                 
                 if solver in self.results:
-                    f.write("| Margin | Status | Optimal Value | Execution Time |\n")
-                    f.write("|--------|--------|---------------|----------------|\n")
+                    # Summary for this solver
+                    solver_results = self.results[solver]
+                    successful_tests = sum(1 for r in solver_results.values() 
+                                         if r.get('success') and r.get('feasible'))
+                    total_tests = len(solver_results)
                     
-                    for margin in sorted(self.results[solver].keys(), reverse=True):
-                        result = self.results[solver][margin]
+                    min_margin = self.min_margins.get(solver)
+                    if min_margin is not None:
+                        f.write(f"**Status:** ✅ Feasible (minimum margin: **{min_margin:.2f}**)  \n")
+                        f.write(f"**Success Rate:** {successful_tests}/{total_tests} tests passed  \n")
+                        
+                        # Performance metrics for successful tests
+                        successful_results = [r for r in solver_results.values() 
+                                           if r.get('success') and r.get('feasible')]
+                        if successful_results:
+                            exec_times = [r.get('execution_time', 0) for r in successful_results]
+                            optimal_values = [r.get('optimal_value', 0) for r in successful_results]
+                            
+                            f.write(f"**Avg Execution Time:** {sum(exec_times)/len(exec_times):.2f}s  \n")
+                            f.write(f"**Optimal Value Range:** {min(optimal_values):.2f} - {max(optimal_values):.2f}  \n")
+                    else:
+                        f.write(f"**Status:** ❌ No feasible solutions found  \n")
+                        f.write(f"**Tests Run:** {total_tests} (all failed)  \n")
+                    
+                    f.write("\n")
+                    
+                    # Detailed results table
+                    f.write("#### Complete Test Results\n\n")
+                    f.write("| Margin | Status | Optimal Value | Execution Time | Notes |\n")
+                    f.write("|--------|--------|---------------|----------------|-------|\n")
+                    
+                    for margin in sorted(solver_results.keys(), reverse=True):
+                        result = solver_results[margin]
                         
                         if result.get('success') and result.get('feasible'):
                             status = "✅ Feasible"
-                            optimal = f"{result.get('optimal_value', 'N/A')}"
+                            optimal = f"{result.get('optimal_value', 'N/A'):.2f}"
+                            notes = "Optimal solution found"
                         elif result.get('success'):
                             status = "❌ Infeasible"
                             optimal = "N/A"
+                            notes = "No feasible solution at this margin"
                         else:
-                            status = f"💥 Error: {result.get('error', 'Unknown')}"
+                            status = "💥 Error"
                             optimal = "N/A"
+                            error = result.get('error', 'Unknown error')
+                            notes = f"Execution failed: {error[:50]}..."
                         
                         exec_time = f"{result.get('execution_time', 0):.2f}s"
-                        f.write(f"| {margin:.2f} | {status} | {optimal} | {exec_time} |\n")
+                        f.write(f"| {margin:.2f} | {status} | {optimal} | {exec_time} | {notes} |\n")
+                
+                else:
+                    f.write("No test results available for this solver.\n")
                 
                 f.write("\n")
             
-            # Analysis
-            f.write("## Analysis\n\n")
+            f.write("---\n\n")
+            
+            # Analysis and Recommendations
+            f.write("## 🔍 Analysis & Recommendations\n\n")
             
             if feasible_solvers:
+                f.write("### 🎯 Solver Selection Guide\n\n")
+                
+                # Categorize solvers
+                best_solver = min(feasible_solvers, key=lambda s: self.min_margins[s])
+                
+                f.write(f"**For Production Use:**\n")
+                f.write(f"- Primary choice: `solver_{best_solver}` (minimum margin {self.min_margins[best_solver]:.2f})\n")
+                
+                other_solvers = [s for s in feasible_solvers if s != best_solver]
+                if other_solvers:
+                    f.write(f"- Backup options: {', '.join(f'`solver_{s}`' for s in other_solvers)}\n")
+                
+                f.write("\n**Margin Recommendations:**\n")
+                f.write(f"- Conservative: Use margin ≥ 0.8 for safety\n")
+                f.write(f"- Balanced: Use margin ≥ {max(0.6, min(self.min_margins[s] for s in feasible_solvers) + 0.1):.2f}\n")
+                f.write(f"- Aggressive: Use minimum margin {min(self.min_margins[s] for s in feasible_solvers):.2f}\n\n")
+                
                 # Robustness analysis
-                robust_margins = {}
+                margin_ranges = {}
                 for solver in feasible_solvers:
-                    robust_margins[solver] = self.min_margins[solver]
+                    solver_results = self.results[solver]
+                    successful_margins = [m for m, r in solver_results.items() 
+                                        if r.get('success') and r.get('feasible')]
+                    if successful_margins:
+                        margin_ranges[solver] = (min(successful_margins), max(successful_margins))
                 
-                most_robust = max(robust_margins, key=robust_margins.get)
-                f.write(f"- **Most Robust Solver:** solver_{most_robust} (works down to margin {robust_margins[most_robust]:.2f})\n")
+                f.write("### 🛡️ Robustness Analysis\n\n")
+                f.write("| Solver | Working Range | Robustness |\n")
+                f.write("|--------|---------------|------------|\n")
                 
-                # Performance comparison at standard margins
-                standard_margins = [1.0, 0.8, 0.6]
-                f.write("\n### Performance at Standard Margins\n\n")
+                for solver in sorted(margin_ranges.keys(), key=lambda s: margin_ranges[s][0]):
+                    min_m, max_m = margin_ranges[solver]
+                    range_size = max_m - min_m
+                    
+                    if range_size >= 0.4:
+                        robustness = "🛡️ Excellent"
+                    elif range_size >= 0.2:
+                        robustness = "⚡ Good"
+                    else:
+                        robustness = "⚠️ Limited"
+                    
+                    f.write(f"| `solver_{solver}` | {min_m:.2f} - {max_m:.2f} | {robustness} |\n")
                 
-                for margin in standard_margins:
-                    f.write(f"**Margin {margin:.1f}:**\n")
-                    for solver in self.solvers:
-                        if margin in self.results.get(solver, {}):
-                            result = self.results[solver][margin]
-                            if result.get('success') and result.get('feasible'):
-                                optimal = result.get('optimal_value', 'N/A')
-                                time_taken = result.get('execution_time', 0)
-                                f.write(f"- solver_{solver}: {optimal} relocations ({time_taken:.2f}s)\n")
-                            else:
-                                f.write(f"- solver_{solver}: Infeasible\n")
-                    f.write("\n")
+                f.write("\n")
+                
             else:
-                f.write("No feasible solutions found for any solver. This may indicate:\n")
-                f.write("- The dataset has very tight resource constraints\n")
-                f.write("- There may be constraint violations in the dataset\n")
-                f.write("- The problem may be inherently difficult to solve\n\n")
+                f.write("### ❌ No Feasible Solutions Found\n\n")
+                f.write("**Possible reasons:**\n")
+                f.write("- Dataset has very tight resource constraints\n")
+                f.write("- Constraint violations in the dataset\n") 
+                f.write("- Problem complexity exceeds solver capabilities\n\n")
+                
+                f.write("**Recommended actions:**\n")
+                f.write("1. Verify dataset integrity using the test suite\n")
+                f.write("2. Try larger margins (> 1.0)\n")
+                f.write("3. Review resource utilization in the dataset\n")
+                f.write("4. Check for MANO/SR-IOV constraint violations\n\n")
+            
+            # Technical details
+            f.write("---\n\n")
+            f.write("## 🔧 Technical Details\n\n")
+            f.write(f"- **Dataset Path:** `{self.dataset_path}`\n")
+            f.write(f"- **Output Directory:** `{self.output_dir}`\n")
+            f.write(f"- **Solvers Tested:** {', '.join(f'`solver_{s}`' for s in self.solvers)}\n")
+            f.write(f"- **Margin Range:** {max(self.margins):.2f} to {min(self.margins):.2f}\n")
+            f.write(f"- **Step Size:** {abs(self.margins[1] - self.margins[0]):.2f}\n")
+            f.write(f"- **Total Margin Points:** {len(self.margins)}\n")
+            f.write(f"- **Total Solver Runs:** {sum(len(self.results.get(s, {})) for s in self.solvers)}\n\n")
+            
+            f.write("**Generated Files:**\n")
+            f.write(f"- 📄 Markdown Report: `{md_file.name}`\n")
+            f.write(f"- 📊 JSON Data: `{self.dataset_name}_solver_comparison.json`\n")
+            f.write(f"- 📈 Visualization: `{self.dataset_name}_solver_comparison.png`\n")
+            f.write(f"- 📋 CSV Table: `{self.dataset_name}_comparison_table.csv`\n")
         
-        print(f"  ✅ Markdown report saved: {md_file}")
+        print(f"  ✅ Enhanced markdown report saved: {md_file}")
     
     def print_summary(self):
         """Print summary results to console."""
