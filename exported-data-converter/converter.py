@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import math
 
 class DRADataConverter:
     def __init__(self, input_dir, output_dir):
@@ -12,7 +13,7 @@ class DRADataConverter:
         clusters = nodes_df['Cluster'].unique()
         
         clusters_data = []
-        for i, cluster_name in enumerate(clusters, 1):
+        for i, cluster_name in enumerate(clusters, 0):  # Start from 0
             clusters_data.append({
                 'id': i,
                 'name': cluster_name
@@ -27,7 +28,7 @@ class DRADataConverter:
         cluster_mapping = dict(zip(clusters_df['name'], clusters_df['id']))
         
         nodes_data = []
-        node_id = 1
+        node_id = 0  # Start from 0
         
         for _, row in nodes_df.iterrows():
             nodes_data.append({
@@ -44,27 +45,47 @@ class DRADataConverter:
         return nodes_df_converted
     
     def convert_jobs(self, workloads_df, clusters_df):
-        """Convert export_workloads.csv to jobs.csv format"""
+        """Convert export_workloads.csv to jobs.csv format - grouped by namespace"""
         # Create cluster name to id mapping
         cluster_mapping = dict(zip(clusters_df['name'], clusters_df['id']))
         
-        jobs_data = []
+        # Auto-set CPU when it's 0: CPU = floor((Memory / 2) / 1000) * 1000 (round down to nearest thousand)
+        def calculate_cpu(row):
+            if row['LimitsCPU(m)'] == 0:
+                cpu_calc = row['LimitsMemory(Mi)'] / 2
+                return math.floor(cpu_calc / 1000) * 1000
+            else:
+                return row['LimitsCPU(m)']
         
-        for _, row in workloads_df.iterrows():
-            # Calculate total requirements considering replicas
-            total_cpu = row['LimitsCPU(m)'] * row['Replicas']
-            total_mem = row['LimitsMemory(Mi)'] * row['Replicas']
-            total_vf = row['LimitSRIOV'] * row['Replicas']
-            
+        workloads_df['adjusted_cpu'] = workloads_df.apply(calculate_cpu, axis=1)
+        
+        # Calculate total resources per workload (considering replicas)
+        workloads_df['total_cpu'] = workloads_df['adjusted_cpu'] * workloads_df['Replicas']
+        workloads_df['total_mem'] = workloads_df['LimitsMemory(Mi)'] * workloads_df['Replicas']
+        workloads_df['total_vf'] = workloads_df['LimitSRIOV'] * workloads_df['Replicas']
+        
+        # Group by cluster and namespace, then sum the resources
+        namespace_groups = workloads_df.groupby(['Cluster', 'Namespace']).agg({
+            'total_cpu': 'sum',
+            'total_mem': 'sum',
+            'total_vf': 'sum',
+            'Replicas': 'sum'
+        }).reset_index()
+        
+        jobs_data = []
+        job_id = 0  # Start from 0
+        
+        for _, row in namespace_groups.iterrows():
             jobs_data.append({
-                'id': row['No'],
+                'id': job_id,
                 'cluster_id': cluster_mapping[row['Cluster']],
-                'name': f"{row['Namespace']}/{row['Workload']}",
-                'req_cpu': total_cpu,
-                'req_mem': total_mem,
-                'req_vf': total_vf,
-                'replicas': row['Replicas']
+                'name': row['Namespace'],
+                'req_cpu': int(row['total_cpu']),  # Ensure integer
+                'req_mem': int(row['total_mem']),  # Ensure integer
+                'req_vf': int(row['total_vf']),    # Ensure integer
+                'replicas': int(row['Replicas'])   # Ensure integer
             })
+            job_id += 1
         
         jobs_df = pd.DataFrame(jobs_data)
         return jobs_df
@@ -92,12 +113,23 @@ class DRADataConverter:
         print(f"Generated files:")
         print(f"- {self.output_dir}/clusters.csv ({len(clusters_df)} clusters)")
         print(f"- {self.output_dir}/nodes.csv ({len(nodes_converted_df)} nodes)")
-        print(f"- {self.output_dir}/jobs.csv ({len(jobs_df)} jobs)")
+        print(f"- {self.output_dir}/jobs.csv ({len(jobs_df)} jobs/namespaces)")
+        
+        # Print summary of jobs by cluster
+        print(f"\nJobs summary by cluster:")
+        for cluster_id in jobs_df['cluster_id'].unique():
+            cluster_name = clusters_df[clusters_df['id'] == cluster_id]['name'].iloc[0]
+            cluster_jobs = jobs_df[jobs_df['cluster_id'] == cluster_id]
+            print(f"- {cluster_name}: {len(cluster_jobs)} namespaces")
+            
+        # Print CPU adjustment summary
+        total_cpu_adjusted = len(workloads_df[workloads_df['LimitsCPU(m)'] == 0])
+        print(f"\nCPU adjustments: {total_cpu_adjusted} workloads had CPU automatically calculated from memory (rounded down to nearest thousand)")
 
 if __name__ == "__main__":
     # Configuration
     input_directory = "../data/real-data"
-    output_directory = "../data/real-data"
+    output_directory = "../data/converted"
     
     # Create converter and run conversion
     converter = DRADataConverter(input_directory, output_directory)
