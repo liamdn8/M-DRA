@@ -97,7 +97,7 @@ class DRADataConverter:
 if __name__ == "__main__":
     # Configuration
     input_directory = "../data/real-data"
-    output_directory = "../data/converted"
+    output_directory = "../data/real-data"
     
     # Create converter and run conversion
     converter = DRADataConverter(input_directory, output_directory)
