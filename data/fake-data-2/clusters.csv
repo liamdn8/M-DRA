@@ -1,0 +1,4 @@
+id,name,mano_supported,sriov_supported
+0,k8s-cicd,1,1
+1,k8s-mano,1,0
+2,pat-141,0,1

@@ -1,8 +1,6 @@
 import argparse
+import sys
 from pathlib import Path
-from solver_x import main as run_solver_x
-from solver_y import main as run_solver_y
-from solver_xy import main as run_solver_xy
 
 def main():
     parser = argparse.ArgumentParser(description="Unified solver for resource allocation")
@@ -16,27 +14,46 @@ def main():
     base_out = Path(args.out)
     base_out.mkdir(parents=True, exist_ok=True)
 
-    if args.mode == 'x' or args.mode == 'all':
-        out_x = base_out / "solver_x"
-        out_x.mkdir(parents=True, exist_ok=True)
-        args_dict_x = vars(args).copy()
-        args_dict_x['out'] = str(out_x)
-        args_x = argparse.Namespace(**args_dict_x)
-        run_solver_x(args_x)
-    if args.mode == 'y' or args.mode == 'all':
-        out_y = base_out / "solver_y"
-        out_y.mkdir(parents=True, exist_ok=True)
-        args_dict_y = vars(args).copy()
-        args_dict_y['out'] = str(out_y)
-        args_y = argparse.Namespace(**args_dict_y)
-        run_solver_y(args_y)
+    # Backup original sys.argv
+    original_argv = sys.argv.copy()
+
     if args.mode == 'xy' or args.mode == 'all':
+        print("Running Solver XY...")
         out_xy = base_out / "solver_xy"
         out_xy.mkdir(parents=True, exist_ok=True)
-        args_dict_xy = vars(args).copy()
-        args_dict_xy['out'] = str(out_xy)
-        args_xy = argparse.Namespace(**args_dict_xy)
-        run_solver_xy(args_xy)
+        
+        # Set sys.argv for solver_xy
+        sys.argv = ['solver_xy.py', '--input', args.input, '--margin', args.margin, '--out', str(out_xy)]
+        
+        from mdra_solver.solver_xy import main as run_solver_xy
+        run_solver_xy()
+
+    if args.mode == 'x' or args.mode == 'all':
+        print("Running Solver X...")
+        out_x = base_out / "solver_x"
+        out_x.mkdir(parents=True, exist_ok=True)
+        
+        # Set sys.argv for solver_x
+        sys.argv = ['solver_x.py', '--input', args.input, '--margin', args.margin, '--out', str(out_x)]
+        
+        from mdra_solver.solver_x import main as run_solver_x
+        run_solver_x()
+        
+    if args.mode == 'y' or args.mode == 'all':
+        print("Running Solver Y...")
+        out_y = base_out / "solver_y"
+        out_y.mkdir(parents=True, exist_ok=True)
+        
+        # Set sys.argv for solver_y
+        sys.argv = ['solver_y.py', '--input', args.input, '--margin', args.margin, '--out', str(out_y)]
+        
+        from mdra_solver.solver_y import main as run_solver_y
+        run_solver_y()
+        
+    
+
+    # Restore original sys.argv
+    sys.argv = original_argv
 
 if __name__ == "__main__":
     main()

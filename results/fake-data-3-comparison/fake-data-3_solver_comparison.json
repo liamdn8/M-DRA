@@ -1,0 +1,190 @@
+{
+  "dataset": "fake-data-3",
+  "test_timestamp": "2025-10-07 02:01:08",
+  "margins_tested": [
+    1.0,
+    0.95,
+    0.9,
+    0.85,
+    0.8,
+    0.75,
+    0.7,
+    0.65,
+    0.6,
+    0.55,
+    0.5,
+    0.45,
+    0.4,
+    0.35
+  ],
+  "solvers_tested": [
+    "x",
+    "y",
+    "xy"
+  ],
+  "minimum_margins": {
+    "x": 0.55,
+    "y": 0.8,
+    "xy": 0.85
+  },
+  "detailed_results": {
+    "x": {
+      "1.0": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 1.0,
+        "execution_time": 3.5457708835601807,
+        "solver_status": "optimal"
+      },
+      "0.95": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 1.0,
+        "execution_time": 3.521455764770508,
+        "solver_status": "optimal"
+      },
+      "0.9": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 1.0,
+        "execution_time": 3.553212881088257,
+        "solver_status": "optimal"
+      },
+      "0.85": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 1.0,
+        "execution_time": 3.507178783416748,
+        "solver_status": "optimal"
+      },
+      "0.8": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 2.0,
+        "execution_time": 3.4065537452697754,
+        "solver_status": "optimal"
+      },
+      "0.75": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 4.0,
+        "execution_time": 3.609997272491455,
+        "solver_status": "optimal"
+      },
+      "0.7": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 4.0,
+        "execution_time": 3.5400736331939697,
+        "solver_status": "optimal"
+      },
+      "0.65": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 8.0,
+        "execution_time": 3.6093909740448,
+        "solver_status": "optimal"
+      },
+      "0.6": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 9.0,
+        "execution_time": 3.564621686935425,
+        "solver_status": "optimal"
+      },
+      "0.55": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 10.0,
+        "execution_time": 3.714660882949829,
+        "solver_status": "optimal"
+      },
+      "0.5": {
+        "success": true,
+        "feasible": false,
+        "execution_time": 1.8307392597198486,
+        "solver_status": "infeasible",
+        "optimal_value": null
+      }
+    },
+    "y": {
+      "1.0": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 2.0,
+        "execution_time": 6.131245374679565,
+        "solver_status": "optimal"
+      },
+      "0.95": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 2.0,
+        "execution_time": 6.191643953323364,
+        "solver_status": "optimal"
+      },
+      "0.9": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 2.0,
+        "execution_time": 5.978861570358276,
+        "solver_status": "optimal"
+      },
+      "0.85": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 2.0,
+        "execution_time": 5.840837717056274,
+        "solver_status": "optimal"
+      },
+      "0.8": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 2.0,
+        "execution_time": 6.006866931915283,
+        "solver_status": "optimal"
+      },
+      "0.75": {
+        "success": true,
+        "feasible": false,
+        "execution_time": 41.20277523994446,
+        "solver_status": "optimal_inaccurate"
+      }
+    },
+    "xy": {
+      "1.0": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 1.0,
+        "execution_time": 7.136784076690674,
+        "solver_status": "optimal"
+      },
+      "0.95": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 1.0,
+        "execution_time": 7.280945777893066,
+        "solver_status": "optimal"
+      },
+      "0.9": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 1.0,
+        "execution_time": 6.973627090454102,
+        "solver_status": "optimal"
+      },
+      "0.85": {
+        "success": true,
+        "feasible": true,
+        "optimal_value": 1.0,
+        "execution_time": 7.015627384185791,
+        "solver_status": "optimal"
+      },
+      "0.8": {
+        "success": true,
+        "feasible": false,
+        "execution_time": 7.137990474700928,
+        "solver_status": "optimal_inaccurate"
+      }
+    }
+  }
+}

@@ -1,7 +1,0 @@
-id,name,mano_supported,sriov_supported,cpu_cap,mem_cap,vf_cap,cpu_req,mem_req,vf_req
-0,cluster_0,1,1,225,670,105,101,375,22
-1,cluster_1,1,0,173,414,0,105,278,0
-2,cluster_2,0,1,182,398,90,131,336,14
-3,cluster_3,0,0,169,409,0,71,141,0
-4,cluster_4,1,0,271,740,0,178,522,0
-5,cluster_5,0,0,213,412,0,120,211,0

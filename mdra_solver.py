@@ -124,6 +124,7 @@ Examples:
         
         # Import and run simple solver
         try:
+            sys.path.append(str(Path(__file__).parent / 'tools' / 'solver_tools'))
             from simple_solver_cli import run_solver
             
             if args.mode == 'all':

@@ -1,5 +1,0 @@
-id,name,mano_supported,sriov_supported
-0,k8s-cicd,0,0
-1,k8s-nano,1,0
-2,pat-141,1,0
-3,pat-171,1,1

@@ -1,0 +1,280 @@
+{
+  "summary": {
+    "total_datasets": 1,
+    "enhanced_datasets": 1,
+    "legacy_datasets": 0,
+    "production_ready": 1,
+    "test_timestamp": "/home/liamdn/M-DRA"
+  },
+  "results": {
+    "test-cleanup": {
+      "file_structure": {
+        "clusters.csv": {
+          "exists": true,
+          "readable": true,
+          "rows": 3,
+          "columns": [
+            "id",
+            "name",
+            "mano_supported",
+            "sriov_supported"
+          ]
+        },
+        "nodes.csv": {
+          "exists": true,
+          "readable": true,
+          "rows": 12,
+          "columns": [
+            "id",
+            "default_cluster",
+            "cpu_cap",
+            "mem_cap",
+            "vf_cap",
+            "relocation_cost"
+          ]
+        },
+        "jobs.csv": {
+          "exists": true,
+          "readable": true,
+          "rows": 15,
+          "columns": [
+            "id",
+            "default_cluster",
+            "cpu_req",
+            "mem_req",
+            "vf_req",
+            "mano_req",
+            "start_time",
+            "duration",
+            "relocation_cost"
+          ]
+        },
+        "clusters_cap.csv": {
+          "exists": true,
+          "readable": true,
+          "rows": 3,
+          "columns": [
+            "id",
+            "name",
+            "mano_supported",
+            "sriov_supported",
+            "cpu_cap",
+            "mem_cap",
+            "vf_cap",
+            "cpu_req",
+            "mem_req",
+            "vf_req"
+          ]
+        },
+        "temporal_loads.csv": {
+          "exists": true,
+          "readable": true,
+          "rows": 30,
+          "columns": [
+            "cluster_id",
+            "timeslice",
+            "cpu_load",
+            "mem_load",
+            "vf_load",
+            "job_count"
+          ]
+        },
+        "cluster_diagram.png": {
+          "exists": true,
+          "size_kb": 214
+        },
+        "temporal_loads.png": {
+          "exists": true,
+          "size_kb": 574
+        }
+      },
+      "data_integrity": {
+        "cluster_id_consistency": {
+          "clusters_vs_cap": true,
+          "clusters_vs_temporal": true,
+          "all_consistent": true
+        },
+        "node_cluster_refs": {
+          "valid": true,
+          "invalid_refs": []
+        },
+        "job_cluster_refs": {
+          "valid": true,
+          "invalid_refs": []
+        },
+        "capacity_calculations": [
+          {
+            "cluster_id": 0,
+            "cpu_cap_match": "True",
+            "mem_cap_match": "True",
+            "vf_cap_match": "True",
+            "cpu_req_match": "True",
+            "mem_req_match": "True",
+            "vf_req_match": "True"
+          },
+          {
+            "cluster_id": 1,
+            "cpu_cap_match": "True",
+            "mem_cap_match": "True",
+            "vf_cap_match": "True",
+            "cpu_req_match": "True",
+            "mem_req_match": "True",
+            "vf_req_match": "True"
+          },
+          {
+            "cluster_id": 2,
+            "cpu_cap_match": "True",
+            "mem_cap_match": "True",
+            "vf_cap_match": "True",
+            "cpu_req_match": "True",
+            "mem_req_match": "True",
+            "vf_req_match": "True"
+          }
+        ]
+      },
+      "job_distribution": {
+        "total_jobs": 15,
+        "num_clusters": 3,
+        "jobs_per_cluster": {
+          "0": 5,
+          "1": 5,
+          "2": 5
+        },
+        "distribution_stats": {
+          "min_jobs": "5",
+          "max_jobs": "5",
+          "mean_jobs": 5.0,
+          "std_jobs": 0.0
+        },
+        "distribution_quality": {
+          "expected_per_cluster": 5.0,
+          "max_deviation": 0.0,
+          "is_well_distributed": "True",
+          "balance_ratio": 1.0
+        }
+      },
+      "temporal_patterns": {
+        "cluster_0": {
+          "max_cpu_load": "182",
+          "max_mem_load": "478",
+          "max_concurrent_jobs": "5",
+          "max_cpu_utilization": 82.72727272727273,
+          "max_mem_utilization": 79.93311036789298,
+          "peak_cpu_timeslices": [
+            3,
+            4,
+            5
+          ],
+          "peak_mem_timeslices": [
+            3,
+            4,
+            5
+          ],
+          "cpu_variance": 6717.733333333334,
+          "mem_variance": 40747.333333333336,
+          "has_temporal_variation": "True",
+          "has_high_load_periods": "True"
+        },
+        "cluster_1": {
+          "max_cpu_load": "83",
+          "max_mem_load": "235",
+          "max_concurrent_jobs": "5",
+          "max_cpu_utilization": 50.609756097560975,
+          "max_mem_utilization": 50.10660980810234,
+          "peak_cpu_timeslices": [
+            4,
+            5
+          ],
+          "peak_mem_timeslices": [
+            4,
+            5
+          ],
+          "cpu_variance": 1231.1555555555556,
+          "mem_variance": 9730.011111111111,
+          "has_temporal_variation": "True",
+          "has_high_load_periods": "False"
+        },
+        "cluster_2": {
+          "max_cpu_load": "60",
+          "max_mem_load": "187",
+          "max_concurrent_jobs": "4",
+          "max_cpu_utilization": 42.25352112676056,
+          "max_mem_utilization": 50.0,
+          "peak_cpu_timeslices": [
+            3,
+            4,
+            5
+          ],
+          "peak_mem_timeslices": [
+            3,
+            4,
+            5
+          ],
+          "cpu_variance": 696.5,
+          "mem_variance": 6325.433333333333,
+          "has_temporal_variation": "True",
+          "has_high_load_periods": "False"
+        }
+      },
+      "constraint_compliance": {
+        "mano_violations": [],
+        "sriov_violations": [],
+        "total_mano_jobs": 5,
+        "total_sriov_jobs": 2,
+        "mano_compliance": true,
+        "sriov_compliance": true,
+        "full_compliance": true
+      },
+      "solver_compatibility": {
+        "solver_x": {
+          "success": true,
+          "stdout": "\ud83d\udd27 M-DRA Simple Solver Mode\n==================================================\n\ud83d\ude80 Running solver_x...\n   Dataset: test_data/test-cleanup\n   Output: results/solver_x\n   Margin: 1.0\n\ud83d\ude80 Running solver_x...\n   Dataset: test_data/test-cleanup\n   Output: results/test-cleanup/solver_x/1_0\n   Margin: 1.0\n   Files: PNG, CSV, MD\nSolver input files generated successfully.\nSolver status: optimal\n\n=== Job assignments to clusters ===\n- Job 0 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 1 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 2 assigned to Cluster 1 (default: 1), relocation cost: 0\n- Job 3 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 4 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 5 assigned to Cluster 1 (default: 1), relocation cost: 0\n- Job 6 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 7 assigned to Cluster 1 (default: 1), relocation cost: 0\n- Job 8 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 9 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 10 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 11 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 12 assigned to Cluster 1 (default: 1), relocation cost: 0\n- Job 13 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 14 assigned to Cluster 1 (default: 1), relocation cost: 0\n\nOptimal relocations = 0.0\n\nSolution files and plots generated.\n\u2705 solver_x completed successfully\n\ud83d\udcc1 Results saved in: results/test-cleanup/solver_x/1_0\n\u2705 Solver completed successfully!\n\ud83d\udcc1 Results saved in: results/solver_x\n",
+          "stderr": "",
+          "execution_time": "within_timeout",
+          "optimal_value": 0.0
+        },
+        "solver_y": {
+          "success": true,
+          "stdout": "\ud83d\udd27 M-DRA Simple Solver Mode\n==================================================\n\ud83d\ude80 Running solver_y...\n   Dataset: test_data/test-cleanup\n   Output: results/solver_y\n   Margin: 1.0\n\ud83d\ude80 Running solver_y...\n   Dataset: test_data/test-cleanup\n   Output: results/test-cleanup/solver_y/1_0\n   Margin: 1.0\n   Files: PNG, CSV, MD\nSolver input files generated successfully.\nSolver status: optimal\n\n=== Node allocations per timeslice ===\n- Node 0 assigned to Cluster 0 at time 0\n- Node 0 assigned to Cluster 0 at time 1\n- Node 0 assigned to Cluster 0 at time 2\n- Node 0 assigned to Cluster 0 at time 3\n- Node 0 assigned to Cluster 0 at time 4\n- Node 0 assigned to Cluster 0 at time 5\n- Node 0 assigned to Cluster 0 at time 6\n- Node 0 assigned to Cluster 0 at time 7\n- Node 0 assigned to Cluster 0 at time 8\n- Node 0 assigned to Cluster 0 at time 9\n- Node 1 assigned to Cluster 0 at time 0\n- Node 1 assigned to Cluster 0 at time 1\n- Node 1 assigned to Cluster 0 at time 2\n- Node 1 assigned to Cluster 0 at time 3\n- Node 1 assigned to Cluster 0 at time 4\n- Node 1 assigned to Cluster 0 at time 5\n- Node 1 assigned to Cluster 0 at time 6\n- Node 1 assigned to Cluster 0 at time 7\n- Node 1 assigned to Cluster 0 at time 8\n- Node 1 assigned to Cluster 0 at time 9\n- Node 2 assigned to Cluster 0 at time 0\n- Node 2 assigned to Cluster 0 at time 1\n- Node 2 assigned to Cluster 0 at time 2\n- Node 2 assigned to Cluster 0 at time 3\n- Node 2 assigned to Cluster 0 at time 4\n- Node 2 assigned to Cluster 0 at time 5\n- Node 2 assigned to Cluster 0 at time 6\n- Node 2 assigned to Cluster 0 at time 7\n- Node 2 assigned to Cluster 0 at time 8\n- Node 2 assigned to Cluster 0 at time 9\n- Node 3 assigned to Cluster 0 at time 0\n- Node 3 assigned to Cluster 0 at time 1\n- Node 3 assigned to Cluster 0 at time 2\n- Node 3 assigned to Cluster 0 at time 3\n- Node 3 assigned to Cluster 0 at time 4\n- Node 3 assigned to Cluster 0 at time 5\n- Node 3 assigned to Cluster 0 at time 6\n- Node 3 assigned to Cluster 0 at time 7\n- Node 3 assigned to Cluster 0 at time 8\n- Node 3 assigned to Cluster 0 at time 9\n- Node 4 assigned to Cluster 1 at time 0\n- Node 4 assigned to Cluster 1 at time 1\n- Node 4 assigned to Cluster 1 at time 2\n- Node 4 assigned to Cluster 1 at time 3\n- Node 4 assigned to Cluster 1 at time 4\n- Node 4 assigned to Cluster 1 at time 5\n- Node 4 assigned to Cluster 1 at time 6\n- Node 4 assigned to Cluster 1 at time 7\n- Node 4 assigned to Cluster 1 at time 8\n- Node 4 assigned to Cluster 1 at time 9\n- Node 5 assigned to Cluster 1 at time 0\n- Node 5 assigned to Cluster 1 at time 1\n- Node 5 assigned to Cluster 1 at time 2\n- Node 5 assigned to Cluster 1 at time 3\n- Node 5 assigned to Cluster 1 at time 4\n- Node 5 assigned to Cluster 1 at time 5\n- Node 5 assigned to Cluster 1 at time 6\n- Node 5 assigned to Cluster 1 at time 7\n- Node 5 assigned to Cluster 1 at time 8\n- Node 5 assigned to Cluster 1 at time 9\n- Node 6 assigned to Cluster 1 at time 0\n- Node 6 assigned to Cluster 1 at time 1\n- Node 6 assigned to Cluster 1 at time 2\n- Node 6 assigned to Cluster 1 at time 3\n- Node 6 assigned to Cluster 1 at time 4\n- Node 6 assigned to Cluster 1 at time 5\n- Node 6 assigned to Cluster 1 at time 6\n- Node 6 assigned to Cluster 1 at time 7\n- Node 6 assigned to Cluster 1 at time 8\n- Node 6 assigned to Cluster 1 at time 9\n- Node 7 assigned to Cluster 1 at time 0\n- Node 7 assigned to Cluster 1 at time 1\n- Node 7 assigned to Cluster 1 at time 2\n- Node 7 assigned to Cluster 1 at time 3\n- Node 7 assigned to Cluster 1 at time 4\n- Node 7 assigned to Cluster 1 at time 5\n- Node 7 assigned to Cluster 1 at time 6\n- Node 7 assigned to Cluster 1 at time 7\n- Node 7 assigned to Cluster 1 at time 8\n- Node 7 assigned to Cluster 1 at time 9\n- Node 8 assigned to Cluster 2 at time 0\n- Node 8 assigned to Cluster 2 at time 1\n- Node 8 assigned to Cluster 2 at time 2\n- Node 8 assigned to Cluster 2 at time 3\n- Node 8 assigned to Cluster 2 at time 4\n- Node 8 assigned to Cluster 2 at time 5\n- Node 8 assigned to Cluster 2 at time 6\n- Node 8 assigned to Cluster 2 at time 7\n- Node 8 assigned to Cluster 2 at time 8\n- Node 8 assigned to Cluster 2 at time 9\n- Node 9 assigned to Cluster 2 at time 0\n- Node 9 assigned to Cluster 2 at time 1\n- Node 9 assigned to Cluster 2 at time 2\n- Node 9 assigned to Cluster 2 at time 3\n- Node 9 assigned to Cluster 2 at time 4\n- Node 9 assigned to Cluster 2 at time 5\n- Node 9 assigned to Cluster 2 at time 6\n- Node 9 assigned to Cluster 2 at time 7\n- Node 9 assigned to Cluster 2 at time 8\n- Node 9 assigned to Cluster 2 at time 9\n- Node 10 assigned to Cluster 2 at time 0\n- Node 10 assigned to Cluster 2 at time 1\n- Node 10 assigned to Cluster 2 at time 2\n- Node 10 assigned to Cluster 2 at time 3\n- Node 10 assigned to Cluster 2 at time 4\n- Node 10 assigned to Cluster 2 at time 5\n- Node 10 assigned to Cluster 2 at time 6\n- Node 10 assigned to Cluster 2 at time 7\n- Node 10 assigned to Cluster 2 at time 8\n- Node 10 assigned to Cluster 2 at time 9\n- Node 11 assigned to Cluster 2 at time 0\n- Node 11 assigned to Cluster 2 at time 1\n- Node 11 assigned to Cluster 2 at time 2\n- Node 11 assigned to Cluster 2 at time 3\n- Node 11 assigned to Cluster 2 at time 4\n- Node 11 assigned to Cluster 2 at time 5\n- Node 11 assigned to Cluster 2 at time 6\n- Node 11 assigned to Cluster 2 at time 7\n- Node 11 assigned to Cluster 2 at time 8\n- Node 11 assigned to Cluster 2 at time 9\nOptimal relocations = 0.0\n\nSolution files and plots generated.\n\u2705 solver_y completed successfully\n\ud83d\udcc1 Results saved in: results/test-cleanup/solver_y/1_0\n\u2705 Solver completed successfully!\n\ud83d\udcc1 Results saved in: results/solver_y\n",
+          "stderr": "/home/liamdn/M-DRA/lib/python3.10/site-packages/cvxpy/reductions/solvers/solving_chain.py:418: UserWarning: The problem has an expression with dimension greater than 2. Defaulting to the SCIPY backend for canonicalization.\n  warnings.warn(UserWarning(\n",
+          "execution_time": "within_timeout",
+          "optimal_value": 0.0
+        },
+        "solver_xy": {
+          "success": true,
+          "stdout": "\ud83d\udd27 M-DRA Simple Solver Mode\n==================================================\n\ud83d\ude80 Running solver_xy...\n   Dataset: test_data/test-cleanup\n   Output: results/solver_xy\n   Margin: 1.0\n\ud83d\ude80 Running solver_xy...\n   Dataset: test_data/test-cleanup\n   Output: results/test-cleanup/solver_xy/1_0\n   Margin: 1.0\n   Files: PNG, CSV, MD\nSolver input files generated successfully.\nSolver status: optimal\n\n=== Job assignments to clusters ===\n- Job 0 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 1 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 2 assigned to Cluster 1 (default: 1), relocation cost: 0\n- Job 3 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 4 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 5 assigned to Cluster 1 (default: 1), relocation cost: 0\n- Job 6 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 7 assigned to Cluster 1 (default: 1), relocation cost: 0\n- Job 8 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 9 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 10 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 11 assigned to Cluster 2 (default: 2), relocation cost: 0\n- Job 12 assigned to Cluster 1 (default: 1), relocation cost: 0\n- Job 13 assigned to Cluster 0 (default: 0), relocation cost: 0\n- Job 14 assigned to Cluster 1 (default: 1), relocation cost: 0\n\n=== Node allocations per timeslice ===\n- Node 0 assigned to Cluster 0 at time 0\n- Node 0 assigned to Cluster 0 at time 1\n- Node 0 assigned to Cluster 0 at time 2\n- Node 0 assigned to Cluster 0 at time 3\n- Node 0 assigned to Cluster 0 at time 4\n- Node 0 assigned to Cluster 0 at time 5\n- Node 0 assigned to Cluster 0 at time 6\n- Node 0 assigned to Cluster 0 at time 7\n- Node 0 assigned to Cluster 0 at time 8\n- Node 0 assigned to Cluster 0 at time 9\n- Node 1 assigned to Cluster 0 at time 0\n- Node 1 assigned to Cluster 0 at time 1\n- Node 1 assigned to Cluster 0 at time 2\n- Node 1 assigned to Cluster 0 at time 3\n- Node 1 assigned to Cluster 0 at time 4\n- Node 1 assigned to Cluster 0 at time 5\n- Node 1 assigned to Cluster 0 at time 6\n- Node 1 assigned to Cluster 0 at time 7\n- Node 1 assigned to Cluster 0 at time 8\n- Node 1 assigned to Cluster 0 at time 9\n- Node 2 assigned to Cluster 0 at time 0\n- Node 2 assigned to Cluster 0 at time 1\n- Node 2 assigned to Cluster 0 at time 2\n- Node 2 assigned to Cluster 0 at time 3\n- Node 2 assigned to Cluster 0 at time 4\n- Node 2 assigned to Cluster 0 at time 5\n- Node 2 assigned to Cluster 0 at time 6\n- Node 2 assigned to Cluster 0 at time 7\n- Node 2 assigned to Cluster 0 at time 8\n- Node 2 assigned to Cluster 0 at time 9\n- Node 3 assigned to Cluster 0 at time 0\n- Node 3 assigned to Cluster 0 at time 1\n- Node 3 assigned to Cluster 0 at time 2\n- Node 3 assigned to Cluster 0 at time 3\n- Node 3 assigned to Cluster 0 at time 4\n- Node 3 assigned to Cluster 0 at time 5\n- Node 3 assigned to Cluster 0 at time 6\n- Node 3 assigned to Cluster 0 at time 7\n- Node 3 assigned to Cluster 0 at time 8\n- Node 3 assigned to Cluster 0 at time 9\n- Node 4 assigned to Cluster 1 at time 0\n- Node 4 assigned to Cluster 1 at time 1\n- Node 4 assigned to Cluster 1 at time 2\n- Node 4 assigned to Cluster 1 at time 3\n- Node 4 assigned to Cluster 1 at time 4\n- Node 4 assigned to Cluster 1 at time 5\n- Node 4 assigned to Cluster 1 at time 6\n- Node 4 assigned to Cluster 1 at time 7\n- Node 4 assigned to Cluster 1 at time 8\n- Node 4 assigned to Cluster 1 at time 9\n- Node 5 assigned to Cluster 1 at time 0\n- Node 5 assigned to Cluster 1 at time 1\n- Node 5 assigned to Cluster 1 at time 2\n- Node 5 assigned to Cluster 1 at time 3\n- Node 5 assigned to Cluster 1 at time 4\n- Node 5 assigned to Cluster 1 at time 5\n- Node 5 assigned to Cluster 1 at time 6\n- Node 5 assigned to Cluster 1 at time 7\n- Node 5 assigned to Cluster 1 at time 8\n- Node 5 assigned to Cluster 1 at time 9\n- Node 6 assigned to Cluster 1 at time 0\n- Node 6 assigned to Cluster 1 at time 1\n- Node 6 assigned to Cluster 1 at time 2\n- Node 6 assigned to Cluster 1 at time 3\n- Node 6 assigned to Cluster 1 at time 4\n- Node 6 assigned to Cluster 1 at time 5\n- Node 6 assigned to Cluster 1 at time 6\n- Node 6 assigned to Cluster 1 at time 7\n- Node 6 assigned to Cluster 1 at time 8\n- Node 6 assigned to Cluster 1 at time 9\n- Node 7 assigned to Cluster 1 at time 0\n- Node 7 assigned to Cluster 1 at time 1\n- Node 7 assigned to Cluster 1 at time 2\n- Node 7 assigned to Cluster 1 at time 3\n- Node 7 assigned to Cluster 1 at time 4\n- Node 7 assigned to Cluster 1 at time 5\n- Node 7 assigned to Cluster 1 at time 6\n- Node 7 assigned to Cluster 1 at time 7\n- Node 7 assigned to Cluster 1 at time 8\n- Node 7 assigned to Cluster 1 at time 9\n- Node 8 assigned to Cluster 2 at time 0\n- Node 8 assigned to Cluster 2 at time 1\n- Node 8 assigned to Cluster 2 at time 2\n- Node 8 assigned to Cluster 2 at time 3\n- Node 8 assigned to Cluster 2 at time 4\n- Node 8 assigned to Cluster 2 at time 5\n- Node 8 assigned to Cluster 2 at time 6\n- Node 8 assigned to Cluster 2 at time 7\n- Node 8 assigned to Cluster 2 at time 8\n- Node 8 assigned to Cluster 2 at time 9\n- Node 9 assigned to Cluster 2 at time 0\n- Node 9 assigned to Cluster 2 at time 1\n- Node 9 assigned to Cluster 2 at time 2\n- Node 9 assigned to Cluster 2 at time 3\n- Node 9 assigned to Cluster 2 at time 4\n- Node 9 assigned to Cluster 2 at time 5\n- Node 9 assigned to Cluster 2 at time 6\n- Node 9 assigned to Cluster 2 at time 7\n- Node 9 assigned to Cluster 2 at time 8\n- Node 9 assigned to Cluster 2 at time 9\n- Node 10 assigned to Cluster 2 at time 0\n- Node 10 assigned to Cluster 2 at time 1\n- Node 10 assigned to Cluster 2 at time 2\n- Node 10 assigned to Cluster 2 at time 3\n- Node 10 assigned to Cluster 2 at time 4\n- Node 10 assigned to Cluster 2 at time 5\n- Node 10 assigned to Cluster 2 at time 6\n- Node 10 assigned to Cluster 2 at time 7\n- Node 10 assigned to Cluster 2 at time 8\n- Node 10 assigned to Cluster 2 at time 9\n- Node 11 assigned to Cluster 2 at time 0\n- Node 11 assigned to Cluster 2 at time 1\n- Node 11 assigned to Cluster 2 at time 2\n- Node 11 assigned to Cluster 2 at time 3\n- Node 11 assigned to Cluster 2 at time 4\n- Node 11 assigned to Cluster 2 at time 5\n- Node 11 assigned to Cluster 2 at time 6\n- Node 11 assigned to Cluster 2 at time 7\n- Node 11 assigned to Cluster 2 at time 8\n- Node 11 assigned to Cluster 2 at time 9\nOptimal relocations = 0.0\n\nSolution files and plots generated.\n\u2705 solver_xy completed successfully\n\ud83d\udcc1 Results saved in: results/test-cleanup/solver_xy/1_0\n\u2705 Solver completed successfully!\n\ud83d\udcc1 Results saved in: results/solver_xy\n",
+          "stderr": "/home/liamdn/M-DRA/lib/python3.10/site-packages/cvxpy/reductions/solvers/solving_chain.py:418: UserWarning: The problem has an expression with dimension greater than 2. Defaulting to the SCIPY backend for canonicalization.\n  warnings.warn(UserWarning(\n",
+          "execution_time": "within_timeout",
+          "optimal_value": 0.0
+        }
+      },
+      "performance_metrics": {
+        "overall_utilization": {
+          "cpu": 62.9277566539924,
+          "memory": 64.74670367800138,
+          "vf": 4.784688995215311
+        },
+        "temporal_peaks": {
+          "0": {
+            "peak_cpu_utilization": 82.72727272727273,
+            "peak_mem_utilization": 79.93311036789298
+          },
+          "1": {
+            "peak_cpu_utilization": 50.609756097560975,
+            "peak_mem_utilization": 50.10660980810234
+          },
+          "2": {
+            "peak_cpu_utilization": 42.25352112676056,
+            "peak_mem_utilization": 50.0
+          }
+        },
+        "load_balance_score": 0.6117662824979898,
+        "optimization_potential": {
+          "has_high_util_clusters": true,
+          "has_low_util_clusters": false,
+          "util_range": 32.11751662971176
+        }
+      }
+    }
+  }
+}

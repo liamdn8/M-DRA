@@ -177,10 +177,16 @@ def main():
     objective = cp.Minimize(relocation_cost)
 
     problem = cp.Problem(objective, constraints)
-    problem.solve(solver=cp.SCIP)
+    # Solve with time limit and MIP gap tolerance to avoid timeouts
+    problem.solve(
+        solver=cp.GLPK_MI,
+        verbose=False,
+        tm_lim=1800000,  # 30 minutes (1800 seconds in milliseconds)
+        mip_gap=0.02     # Accept 2% gap from optimal
+    )
 
     print(f"Solver status: {problem.status}")
-    if problem.status != cp.OPTIMAL:
+    if problem.status not in [cp.OPTIMAL, cp.OPTIMAL_INACCURATE]:
         print("No optimal solution found.")
         return
 

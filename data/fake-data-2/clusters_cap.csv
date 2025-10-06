@@ -1,0 +1,4 @@
+id,name,mano_supported,sriov_supported,cpu_cap,mem_cap,vf_cap
+0,k8s-cicd,1,1,480,1344,288
+1,k8s-mano,1,0,544,1472,0
+2,pat-141,0,1,464,1280,0

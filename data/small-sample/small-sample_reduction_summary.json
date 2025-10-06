@@ -1,0 +1,21 @@
+{
+  "dataset_name": "small-sample",
+  "source_path": "data/converted",
+  "target_path": "data/small-sample",
+  "reduction_stats": {
+    "jobs": {
+      "original": 209,
+      "reduced": 40,
+      "reduction_ratio": 0.19138755980861244
+    },
+    "timeslices": {
+      "original": 6181,
+      "reduced": 38,
+      "compression_ratio": 0.0061478725125384244
+    },
+    "capacity": {
+      "cpu_reduction": 0.6761194029850746,
+      "mem_reduction": 0.6927229703495814
+    }
+  }
+}

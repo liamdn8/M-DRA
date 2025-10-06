@@ -1,0 +1,4 @@
+Solver,Min_Margin,Margin_1.0,Margin_0.9,Margin_0.8,Margin_0.7,Margin_0.6,Margin_0.5
+solver_x,0.55,✅ 1.0,✅ 1.0,✅ 2.0,✅ 4.0,✅ 9.0,❌ Infeasible
+solver_y,0.8,✅ 2.0,✅ 2.0,✅ 2.0,❓ Not tested,❓ Not tested,❓ Not tested
+solver_xy,0.85,✅ 1.0,✅ 1.0,❌ Infeasible,❓ Not tested,❓ Not tested,❓ Not tested
