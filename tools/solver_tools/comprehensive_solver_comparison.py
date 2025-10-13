@@ -943,8 +943,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Compare solvers on a dataset
+  # Compare all solvers on a dataset
   python comprehensive_solver_comparison.py data/sample-temporal-load
+  
+  # Test only solver_x
+  python comprehensive_solver_comparison.py data/sample-temporal-load --solvers x
+  
+  # Test solver_x and solver_y only
+  python comprehensive_solver_comparison.py data/sample-temporal-load --solvers x y
   
   # Specify custom output directory
   python comprehensive_solver_comparison.py data/sample-temporal-load --output my_comparison
@@ -957,6 +963,8 @@ Examples:
     parser.add_argument('dataset', help='Path to dataset directory')
     parser.add_argument('--output', '-o', default='solver_comparison', 
                        help='Output directory (default: solver_comparison)')
+    parser.add_argument('--solvers', '-s', nargs='+', choices=['x', 'y', 'xy'],
+                       help='Specific solvers to test (default: all solvers)')
     parser.add_argument('--min-margin', type=float, default=0.1,
                        help='Minimum margin to test (default: 0.1)')
     parser.add_argument('--step', type=float, default=0.05,
@@ -980,6 +988,11 @@ Examples:
     
     # Create comparator
     comparator = SolverComparator(dataset_path, args.output)
+    
+    # Update solvers list if specific solvers requested
+    if args.solvers:
+        comparator.solvers = args.solvers
+        print(f"Testing only: {', '.join([f'solver_{s}' for s in args.solvers])}")
     
     # Update margin range if custom parameters provided
     if args.min_margin != 0.1 or args.step != 0.05:

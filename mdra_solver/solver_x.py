@@ -181,7 +181,7 @@ def main():
     )
 
     print(f"Solver status: {problem.status}")
-    if problem.status != cp.OPTIMAL:
+    if problem.status not in [cp.OPTIMAL, cp.OPTIMAL_INACCURATE]:
         print("No optimal solution found.")
         return
         

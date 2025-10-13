@@ -5,6 +5,8 @@ A comprehensive optimization framework for dynamic resource allocation across mu
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Project Structure](#project-structure)
+- [Documentation](#documentation)
 - [Features](#features)
 - [Installation](#installation)
 - [Solvers Overview](#solvers-overview)
@@ -18,12 +20,14 @@ A comprehensive optimization framework for dynamic resource allocation across mu
 
 ## 🎯 Overview
 
+M-DRA (Multi-cluster Dynamic Resource Allocation) is a research framework for optimizing resource allocation in distributed Kubernetes environments. The system addresses the challenge of efficiently distributing workloads and compute resources across multiple clusters while minimizing relocation costs and respecting resource constraints.
+
+### Problem Statement
+
 M-DRA solves the multi-cluster resource allocation problem by optimizing the placement of:
 - **Jobs** across clusters (which cluster should run which job)
 - **Nodes** across clusters (which cluster should host which node over time)
 - **Combined optimization** for minimal total relocation cost
-
-### Problem Statement
 
 Given:
 - Multiple Kubernetes clusters with varying capabilities (MANO support, SR-IOV support)
@@ -35,6 +39,114 @@ Find:
 - Optimal job-to-cluster assignments
 - Optimal node-to-cluster allocations over time
 - Minimize total relocation costs while satisfying all constraints
+
+### Research Purpose
+
+This framework is designed for:
+- **Academic Research**: Comparative analysis of resource allocation algorithms
+- **Performance Evaluation**: Benchmarking solver approaches (job-only, node-only, combined)
+- **Workload Analysis**: Understanding multi-cluster resource utilization patterns
+- **Decision Support**: Providing data-driven recommendations for cluster management
+
+## 🗂️ Project Structure
+
+```
+M-DRA/
+├── docs/                              # Comprehensive Documentation
+│   ├── 01-project-overview.md         # Architecture and objectives
+│   ├── 02-dataset-format.md           # Data specifications
+│   ├── 03-solver-guide.md             # Algorithm details
+│   ├── 04-comparison-methodology.md   # Evaluation framework
+│   └── 05-visualization-guide.md      # Charts and graphics
+│
+├── mdra_solver/                       # Core Optimization Solvers
+│   ├── solver_x.py                    # Job allocation optimizer
+│   ├── solver_y.py                    # Node allocation optimizer
+│   ├── solver_xy.py                   # Combined optimization
+│   └── solver_helper.py               # Shared utilities
+│
+├── mdra_dataset/                      # Dataset Management
+│   ├── generator.py                   # Synthetic data generation
+│   ├── validator.py                   # Data validation
+│   ├── manager.py                     # Dataset operations
+│   └── real_data_converter.py         # Convert real traces
+│
+├── tools/                             # Analysis & Utilities
+│   ├── solver_tools/                  
+│   │   └── comprehensive_solver_comparison.py  # Benchmark framework
+│   ├── analysis_tools/
+│   │   ├── visualize_workload_over_time.py    # Time-series charts
+│   │   ├── create_dataset_overview.py         # 12-panel overview
+│   │   └── create_slide_summary.py            # Presentation graphics
+│   └── dataset_tools/
+│       └── gen_sample.py              # Quick dataset generator
+│
+├── data/                              # Datasets
+│   ├── fake-data/                     # Small synthetic (15 jobs)
+│   ├── fake-data-2/                   # Medium synthetic (50 jobs)
+│   ├── fake-data-3/                   # Large synthetic (100 jobs)
+│   ├── medium-sample/                 # Stress test data
+│   ├── small-sample/                  # Quick test data
+│   ├── real-data/                     # Converted real traces
+│   └── converted/                     # Production workload sample
+│
+├── results/                           # Solver Outputs
+│   ├── [dataset]-comparison/          # Comparison results
+│   ├── [dataset]-solver-x/            # Job allocation results
+│   ├── [dataset]-solver-y/            # Node allocation results
+│   └── [dataset]-solver-xy/           # Combined results
+│
+├── main.py                            # Main entry point
+├── generate_margin_07_graphs.py       # Margin 0.7 visualizations
+├── enhanced_dataset_reducer.py        # Dataset sampling tool
+└── README.md                          # This file
+```
+
+### Key Components
+
+**Core Modules**:
+- `mdra_solver/`: MIP-based optimization solvers using CVXPY + GLPK
+- `mdra_dataset/`: Dataset generation, validation, and conversion
+- `tools/`: Comprehensive analysis and comparison framework
+
+**Entry Points**:
+- `main.py`: Run individual solvers or all solvers
+- `tools/solver_tools/comprehensive_solver_comparison.py`: Benchmark suite
+- `tools/dataset_tools/gen_sample.py`: Quick dataset creation
+- `generate_margin_07_graphs.py`: Presentation graphics
+
+**Documentation**:
+- Complete technical documentation in `docs/` folder
+- See [Documentation](#documentation) section below
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+### Core Documentation
+
+| Document | Description | Audience |
+|----------|-------------|----------|
+| [**01-Project Overview**](docs/01-project-overview.md) | System architecture, problem formulation, use cases | All users |
+| [**02-Dataset Format**](docs/02-dataset-format.md) | Data specifications, CSV schemas, validation | Data engineers |
+| [**03-Solver Guide**](docs/03-solver-guide.md) | Algorithm details, usage, performance tuning | Researchers |
+| [**04-Comparison Methodology**](docs/04-comparison-methodology.md) | Evaluation framework, metrics, interpretation | Analysts |
+| [**05-Visualization Guide**](docs/05-visualization-guide.md) | Charts, graphs, presentation graphics | All users |
+
+### Quick Navigation
+
+**New Users**: Start with [01-Project Overview](docs/01-project-overview.md) to understand the system architecture and objectives.
+
+**Developers**: Read [03-Solver Guide](docs/03-solver-guide.md) for implementation details and [02-Dataset Format](docs/02-dataset-format.md) for data specifications.
+
+**Researchers**: Focus on [04-Comparison Methodology](docs/04-comparison-methodology.md) for evaluation frameworks and [05-Visualization Guide](docs/05-visualization-guide.md) for publication-ready graphics.
+
+### Additional Resources
+
+- **Dataset Documentation**: `data/README.md` - Overview of available datasets
+- **Solver Analysis**: `solver_xy_objective_analysis.md` - Deep dive into Solver XY
+- **Timeout Solutions**: `SOLVER_X_FIX_SUMMARY.md` - Performance optimization guide
+- **Test Results**: Various result directories contain `README.md` with analysis
 
 ## ✨ Features
 
@@ -91,13 +203,14 @@ pip install -r requirement.txt
 
 ## 🔧 Solvers Overview
 
-### Solver X (Node Allocation)
-**Purpose**: Optimize which nodes should be allocated to which clusters over time
+### Solver X (Job Allocation)
+**Purpose**: Optimize which jobs should run on which clusters (nodes are fixed)
 
 **Use Case**: 
-- Node placement optimization
-- Resource balancing across clusters
-- Minimizing node migrations between clusters
+- Job placement optimization
+- Workload distribution
+- Cluster capability matching (MANO, SR-IOV)
+- When node placement is already determined
 
 **Command**:
 ```bash
@@ -105,21 +218,22 @@ python3 main.py --mode x --input data/my-dataset --margin 0.7 --out results/solv
 ```
 
 **Output**:
-- Node-to-cluster assignments per timeslice
-- Total node relocations
-- Execution time
+- Job-to-cluster assignments
+- Job relocation costs
+- Resource utilization per cluster
 
-**Performance**: Fast (~3-5 seconds for small datasets)
+**Performance**: Fast (~3-8 seconds for medium datasets)
 
 ---
 
-### Solver Y (Job Allocation)
-**Purpose**: Optimize which jobs should run on which clusters
+### Solver Y (Node Allocation)
+**Purpose**: Optimize which nodes should be allocated to which clusters over time (jobs are fixed)
 
 **Use Case**:
-- Job placement optimization
-- Workload distribution
-- Cluster capability matching (MANO, SR-IOV)
+- Node placement optimization
+- Resource balancing across clusters
+- Minimizing node migrations between clusters
+- When job allocation is already determined
 
 **Command**:
 ```bash
@@ -127,11 +241,11 @@ python3 main.py --mode y --input data/my-dataset --margin 0.7 --out results/solv
 ```
 
 **Output**:
-- Job-to-cluster assignments
-- Job relocation costs
-- Cluster utilization per timeslice
+- Node-to-cluster assignments per timeslice
+- Total node relocations
+- Execution time
 
-**Performance**: Medium (~6-15 seconds for small datasets)
+**Performance**: Medium (~6-20 seconds for medium datasets)
 
 ---
 
