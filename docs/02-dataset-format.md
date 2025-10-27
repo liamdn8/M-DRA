@@ -537,7 +537,168 @@ Job5:                                  [█  █  █  █  █  █]
 
 ---
 
-**Next Steps**:
-- [Solver Guide](03-solver-guide.md) - Learn how to run optimizations
-- [Dataset Tools](../tools/dataset_tools/) - Generate and manipulate datasets
-- [Visualization Guide](05-visualization-guide.md) - Visualize your data
+## Advanced Dataset Generation: The Reducer Tool
+
+While the `gen_sample.py` script is excellent for creating purely synthetic datasets from scratch, the `enhanced_dataset_reducer.py` tool offers a powerful way to derive new datasets from existing ones. This is particularly useful for creating smaller, targeted test cases from large, real-world data traces.
+
+### Core Principles of Data Reduction
+
+The reducer operates on several key principles to transform datasets:
+
+1.  **Job Sampling (`--jobs`)**:
+    *   **What it does**: Randomly selects a fraction of jobs from the source dataset.
+    *   **Principle**: This is the primary method for reducing problem complexity. Fewer jobs mean fewer variables and constraints for the MIP solver, leading to significantly faster runtimes. It assumes that a random sample of jobs can still represent the overall workload characteristics.
+
+2.  **Time Compression (`--time`)**:
+    *   **What it does**: Reduces the total number of timeslices by a given factor. It scales down the `start_time` and `end_time` of each job.
+    *   **Principle**: Real-world workloads often have long periods of low activity. Time compression squeezes these idle periods, shortening the simulation timeline while preserving the relative sequence and overlap of jobs. This reduces the size of time-indexed variables in the solver.
+
+3.  **Capacity Scaling (`--capacity`)**:
+    *   **What it does**: Multiplies the resource capacities (CPU, memory, VF) of all nodes by a given fraction.
+    *   **Principle**: When the workload is reduced (fewer jobs), the total available resources must also be scaled down. If capacity remains high while demand is low, the optimization problem becomes trivial (too easy to solve) and doesn't reflect a real-world constrained environment. This ensures the "pressure" on the system is maintained.
+
+4.  **Peak Generation (`--create-peaks`)**:
+    *   **What it does**: Artificially creates periods of high resource demand. It selects a portion of jobs and concentrates their execution windows into shorter, overlapping timeframes.
+    *   **Principle**: This simulates "burst" events or high-traffic scenarios. It's a method for stress-testing the solvers to see how they perform under intense, localized demand, which might not be prominent in a randomly sampled dataset.
+
+5.  **Cluster Filtering (`--remove-low-workload`)**:
+    *   **What it does**: Identifies and removes clusters that have very few jobs assigned to them in the source data. The jobs from removed clusters can be dropped or redistributed.
+    *   **Principle**: Simplifies the problem by focusing only on the most active clusters. This is useful for cleaning up sparse datasets or modeling scenarios where underutilized infrastructure is decommissioned.
+
+### Step-by-Step Guide to Generating a Reduced Dataset
+
+Here is a recommended workflow for using `enhanced_dataset_reducer.py`:
+
+#### Step 1: Analyze the Source Dataset
+Before you begin, understand your starting point.
+- How many jobs, nodes, and timeslices does it have?
+- Use `visualize_workload_over_time.py` to see its resource utilization profile. Is it sparse or dense?
+
+```bash
+# Example: Analyze the 'converted' dataset
+python3 tools/analysis_tools/visualize_workload_over_time.py data/converted
+```
+
+#### Step 2: Define Your Goal
+What kind of dataset do you want to create?
+- **A quick test case?** -> Aim for a small number of jobs (e.g., 20-50) and a short timeline.
+- **A stress test?** -> Aim to create high-demand peaks.
+- **A "what-if" scenario?** -> What if we had less hardware? (reduce capacity) or what if we decommissioned a cluster? (remove low workload).
+
+#### Step 3: Run the Reducer with Initial Parameters
+Start with the most impactful parameters: job sampling and time compression.
+
+```bash
+# Example: Create a first draft of 'small-sample'
+python3 enhanced_dataset_reducer.py data/converted \
+    --target data/small-sample-draft \
+    --jobs 0.2 \
+    --time 160
+```
+*This command takes 20% of the jobs and compresses the timeline by 160x.*
+
+#### Step 4: Adjust Capacity
+The draft from Step 3 has a much smaller workload but the original, large capacity. The next step is crucial: scale down the capacity to match the new workload.
+
+```bash
+# Overwrite the draft with adjusted capacity
+python3 enhanced_dataset_reducer.py data/converted \
+    --target data/small-sample-draft \
+    --jobs 0.2 \
+    --time 160 \
+    --capacity 0.33 \
+    --visualize
+```
+*We add `--capacity 0.33` to create a constrained environment and `--visualize` to see the result.*
+
+#### Step 5: Visualize and Validate
+Check the output directory (`data/small-sample-draft`).
+- Open the generated `..._workload_over_time.png` image.
+- **Ask these questions**:
+    - Does the workload look reasonable? (Not flat at 0%, not constantly at 200%).
+    - Are there interesting peaks and valleys?
+    - Does it look like a problem worth solving?
+- Check the `..._reduction_summary.json` file to see the exact outcome (e.g., "Reduced jobs from 209 to 40").
+
+#### Step 6: Iterate and Refine
+If the generated dataset isn't quite right, tweak the parameters and repeat from Step 4.
+- **Workload too low?** Try a smaller `--capacity` value (e.g., `0.25`) to make it more constrained.
+- **Workload too high/infeasible?** Increase `--capacity` (e.g., `0.4`) or sample fewer jobs (`--jobs 0.15`).
+- **Want to create a stress test?** Add the `--create-peaks` flag.
+
+By following this iterative process, you can precisely craft a wide variety of datasets tailored to your specific testing needs.
+
+## Appendix A: Creating Sample Datasets from Real Data
+
+This appendix provides a practical guide on how to create smaller, manageable datasets from a large, real-world dataset using the `enhanced_dataset_reducer.py` tool. This is crucial for rapid testing, debugging, and analysis without the overhead of processing the full dataset.
+
+### Objective
+
+To create a smaller dataset (`small-sample`) from a large production dataset (`converted`) that retains the essential workload characteristics but is significantly faster to process.
+
+### Tool: `enhanced_dataset_reducer.py`
+
+This script allows you to sample jobs, compress the timeline, and scale down resource capacities.
+
+**Basic Syntax**:
+```bash
+python3 enhanced_dataset_reducer.py <source_directory> [OPTIONS]
+```
+
+### Case Study: Creating `small-sample` from `converted`
+
+The `data/small-sample` dataset was generated from `data/converted` to create a representative but compact test case.
+
+#### 1. Analysis of the Source Dataset (`converted`)
+
+- **Jobs**: 209
+- **Timeslices**: 6181
+- **Characteristics**: Represents a full production workload, making it too large for quick, iterative solver tests.
+
+#### 2. Defining Reduction Goals
+
+- **Reduce job count**: Aim for about 20% of the original jobs to get a good sample.
+- **Compress timeline**: Drastically reduce the number of timeslices.
+- **Scale capacity**: Adjust node capacities to match the reduced workload, creating a balanced and challenging problem.
+
+#### 3. The Command
+
+Based on the analysis of `data/small-sample/small-sample_reduction_summary.json`, the following command was used to generate the dataset:
+
+```bash
+python3 enhanced_dataset_reducer.py data/converted \
+    --target data/small-sample \
+    --jobs 0.2 \
+    --time 160 \
+    --capacity 0.33 \
+    --visualize
+```
+
+#### 4. Parameter Explanation
+
+| Parameter | Value | Effect | Rationale |
+|-----------|-------|--------|-----------|
+| `source` | `data/converted` | Specifies the input dataset. | This is our large, real-world data source. |
+| `--target` | `data/small-sample` | Defines the output directory. | Creates a new, clearly named dataset. |
+| `--jobs` | `0.2` | Randomly selects **20%** of the jobs from the source. | Reduces 209 jobs to approximately 40, making solver runs much faster. |
+| `--time` | `160` | Compresses the timeline by a factor of **160**. | Reduces 6181 timeslices to about 38. This compresses idle periods while preserving the relative timing of jobs. |
+| `--capacity`| `0.33` | Scales all node capacities (CPU, Mem, VF) to **33%** of their original values. | The workload was reduced significantly, so capacity must also be reduced to create a meaningful, constrained optimization problem. Without this, the solver would find trivial solutions. |
+| `--visualize`| - | Generates workload-over-time charts for the new dataset. | Allows for immediate validation that the reduced dataset has a reasonable workload profile. |
+
+#### 5. Results (`small-sample` dataset)
+
+- **Jobs**: 40 (reduced from 209)
+- **Timeslices**: 38 (compressed from 6181)
+- **Node Capacity**: Scaled down to 33%
+- **Output Files**:
+    - `clusters.csv`, `nodes.csv`, `jobs.csv`: The new dataset files.
+    - `small-sample_reduction_summary.json`: A JSON file detailing the exact reductions performed (as seen in the command analysis).
+    - `small-sample_workload_over_time.png`: A visualization of the new, smaller workload.
+
+### Best Practices for Dataset Reduction
+
+1.  **Start with Job Sampling**: The `--jobs` parameter has the most significant impact on solver complexity. Start by reducing the number of jobs.
+2.  **Compress Time**: Use the `--time` parameter to shrink long, idle periods. A high compression factor is often effective.
+3.  **Scale Capacity Proportionally**: After reducing the workload, always scale down capacity with `--capacity`. A good starting point is to use a ratio similar to the job sampling ratio.
+4.  **Visualize and Validate**: Always use the `--visualize` flag. Check the output workload graph to ensure the reduced dataset isn't trivial (e.g., near-zero utilization) or immediately infeasible (e.g., massive overload).
+5.  **Iterate**: You may need to try a few different combinations of parameters to create a sample dataset that is both small and interesting to solve.
