@@ -1,0 +1,21 @@
+{
+  "dataset_name": "large-sample",
+  "source_path": "data/converted",
+  "target_path": "data/large-sample",
+  "reduction_stats": {
+    "jobs": {
+      "original": 209,
+      "reduced": 209,
+      "reduction_ratio": 1.0
+    },
+    "timeslices": {
+      "original": 6181,
+      "reduced": 103,
+      "compression_ratio": 0.01666397023135415
+    },
+    "capacity": {
+      "cpu_reduction": 0.0,
+      "mem_reduction": 0.0
+    }
+  }
+}
