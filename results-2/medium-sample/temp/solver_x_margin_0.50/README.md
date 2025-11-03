@@ -5,23 +5,29 @@
 **Solver Mode:** X  
 **Dataset:** medium-sample  
 **Margin:** 0.50  
-**Timestamp:** 2025-10-28 00:23:24  
+**Timestamp:** 2025-11-03 23:15:32  
 **Timeout:** 600 seconds  
 
 ## 📊 Execution Results
 
 | Metric | Value |
 |--------|-------|
-| **Status** | ✅ optimal_inaccurate |
+| **Status** | ✅ optimal |
 | **Return Code** | 0 |
-| **Execution Time** | 8.88 seconds |
-| **Optimal Value** | 44.0 |
-| **Feasibility** | ⚠️ Unknown |
+| **Execution Time** | 9.42 seconds |
+| **Optimal Value** | 43.0 |
+| **Feasibility** | ✅ Feasible |
 
 ## 🎯 Solution Summary
 
-- **Status:** ⚠️ optimal_inaccurate
-- **Execution completed but results unclear**
+- **Total Relocations:** 43.0
+- **Jobs Assigned:** 61
+- **Jobs Relocated:** 7
+- **Optimization Success:** ✅ Optimal solution found
+
+### Performance Metrics
+- **Avg Time per Job:** 0.154 seconds
+- **Solution Quality:** 43 relocations needed
 
 
 ## 📁 Output Files
@@ -48,7 +54,7 @@ python3 main.py \
 ```
 Running Solver X...
 Solver input files generated successfully.
-Solver status: optimal_inaccurate
+Solver status: optimal
 
 === Job assignments to clusters ===
 - Job 0 assigned to Cluster 0 (default: 0), relocation cost: 0
@@ -71,8 +77,8 @@ Solver status: optimal_inaccurate
 - Job 17 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 18 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 19 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 20 assigned to Cluster 3 (default: 0), relocation cost: 5
-- Job 21 assigned to Cluster 3 (default: 0), relocation cost: 5
+- Job 20 assigned to Cluster 1 (default: 0), relocation cost: 5
+- Job 21 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 22 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 23 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 24 assigned to Cluster 0 (default: 0), relocation cost: 0
@@ -80,14 +86,7 @@ Solver status: optimal_inaccurate
 - Job 26 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 27 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 28 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 29 assigned to...(truncated)
-```
-
-### Standard Error
-```
-/home/liamdn/M-DRA/lib/python3.10/site-packages/cvxpy/problems/problem.py:1504: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
-  warnings.warn(
-
+- Job 29 assigned to Cluster 0 ...(truncated)
 ```
 
 ## 🔗 Related Information
@@ -99,7 +98,7 @@ Solver status: optimal_inaccurate
 
 ## 💡 Notes
 
-- 44 job relocations were necessary to satisfy constraints
+- 43 job relocations were necessary to satisfy constraints
 - Fast execution time indicates good solver performance
 
 ---

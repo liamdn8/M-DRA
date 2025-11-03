@@ -5,7 +5,7 @@
 **Solver Mode:** XY  
 **Dataset:** small-sample  
 **Margin:** 1.00  
-**Timestamp:** 2025-10-27 23:15:19  
+**Timestamp:** 2025-11-03 23:03:03  
 **Timeout:** 600 seconds  
 
 ## 📊 Execution Results
@@ -14,7 +14,7 @@
 |--------|-------|
 | **Status** | ✅ optimal |
 | **Return Code** | 0 |
-| **Execution Time** | 20.85 seconds |
+| **Execution Time** | 19.07 seconds |
 | **Optimal Value** | 6.0 |
 | **Feasibility** | ✅ Feasible |
 
@@ -26,7 +26,7 @@
 - **Optimization Success:** ✅ Optimal solution found
 
 ### Performance Metrics
-- **Avg Time per Job:** 0.521 seconds
+- **Avg Time per Job:** 0.477 seconds
 - **Solution Quality:** 6 relocations needed
 
 
@@ -85,7 +85,7 @@ Solver status: optimal
 - Job 25 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 26 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 27 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 28 assigned to Cluster 2 (default: 0), relocation cost: 5
+- Job 28 assigned to Cluster 1 (default: 0), relocation cost: 5
 - Job 29 assigned to Cluster 0...(truncated)
 ```
 

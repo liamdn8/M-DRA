@@ -5,23 +5,29 @@
 **Solver Mode:** Y  
 **Dataset:** small-sample  
 **Margin:** 0.40  
-**Timestamp:** 2025-10-27 23:34:18  
+**Timestamp:** 2025-11-03 23:02:29  
 **Timeout:** 600 seconds  
 
 ## 📊 Execution Results
 
 | Metric | Value |
 |--------|-------|
-| **Status** | ✅ optimal_inaccurate |
+| **Status** | ✅ optimal |
 | **Return Code** | 0 |
-| **Execution Time** | 389.99 seconds |
+| **Execution Time** | 15.48 seconds |
 | **Optimal Value** | 50.0 |
-| **Feasibility** | ⚠️ Unknown |
+| **Feasibility** | ✅ Feasible |
 
 ## 🎯 Solution Summary
 
-- **Status:** ⚠️ optimal_inaccurate
-- **Execution completed but results unclear**
+- **Total Relocations:** 50.0
+- **Jobs Assigned:** 0
+- **Jobs Relocated:** 0
+- **Optimization Success:** ✅ Optimal solution found
+
+### Performance Metrics
+- **Avg Time per Job:** 15.480 seconds
+- **Solution Quality:** 50 relocations needed
 
 
 ## 📁 Output Files
@@ -48,7 +54,7 @@ python3 main.py \
 ```
 Running Solver Y...
 Solver input files generated successfully.
-Solver status: optimal_inaccurate
+Solver status: optimal
 
 === Node allocations per timeslice ===
 - Node 0 assigned to Cluster 0 at time 0
@@ -95,7 +101,8 @@ Solver status: optimal_inaccurate
 - Node 1 assigned to Cluster 0 at time 3
 - Node 1 assigned to Cluster 0 at time 4
 - Node 1 assigned to Cluster 0 at time 5
-- Node 1 assigned to Cluster 0 ...(truncated)
+- Node 1 assigned to Cluster 0 at time 6
+-...(truncated)
 ```
 
 ### Standard Error
@@ -104,8 +111,6 @@ Solver status: optimal_inaccurate
   warnings.warn("Objective contains too many subexpressions. "
 /home/liamdn/M-DRA/lib/python3.10/site-packages/cvxpy/reductions/solvers/solving_chain.py:418: UserWarning: The problem has an expression with dimension greater than 2. Defaulting to the SCIPY backend for canonicalization.
   warnings.warn(UserWarning(
-/home/liamdn/M-DRA/lib/python3.10/site-packages/cvxpy/problems/problem.py:1504: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
-  warnings.warn(
 
 ```
 
@@ -119,7 +124,6 @@ Solver status: optimal_inaccurate
 ## 💡 Notes
 
 - 50 job relocations were necessary to satisfy constraints
-- Long execution time may indicate complex optimization problem
 
 ---
 

@@ -5,7 +5,7 @@
 **Solver Mode:** Y  
 **Dataset:** small-sample  
 **Margin:** 0.70  
-**Timestamp:** 2025-10-27 23:23:45  
+**Timestamp:** 2025-11-03 23:01:00  
 **Timeout:** 600 seconds  
 
 ## 📊 Execution Results
@@ -14,7 +14,7 @@
 |--------|-------|
 | **Status** | ✅ optimal |
 | **Return Code** | 0 |
-| **Execution Time** | 34.09 seconds |
+| **Execution Time** | 15.09 seconds |
 | **Optimal Value** | 20.0 |
 | **Feasibility** | ✅ Feasible |
 
@@ -26,7 +26,7 @@
 - **Optimization Success:** ✅ Optimal solution found
 
 ### Performance Metrics
-- **Avg Time per Job:** 34.093 seconds
+- **Avg Time per Job:** 15.092 seconds
 - **Solution Quality:** 20 relocations needed
 
 

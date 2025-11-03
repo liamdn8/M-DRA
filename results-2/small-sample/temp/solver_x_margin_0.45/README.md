@@ -5,7 +5,7 @@
 **Solver Mode:** X  
 **Dataset:** small-sample  
 **Margin:** 0.45  
-**Timestamp:** 2025-10-27 23:21:30  
+**Timestamp:** 2025-11-03 22:59:04  
 **Timeout:** 600 seconds  
 
 ## 📊 Execution Results
@@ -14,7 +14,7 @@
 |--------|-------|
 | **Status** | ✅ optimal |
 | **Return Code** | 0 |
-| **Execution Time** | 5.76 seconds |
+| **Execution Time** | 6.07 seconds |
 | **Optimal Value** | 30.0 |
 | **Feasibility** | ✅ Feasible |
 
@@ -26,7 +26,7 @@
 - **Optimization Success:** ✅ Optimal solution found
 
 ### Performance Metrics
-- **Avg Time per Job:** 0.144 seconds
+- **Avg Time per Job:** 0.152 seconds
 - **Solution Quality:** 30 relocations needed
 
 
@@ -57,13 +57,13 @@ Solver input files generated successfully.
 Solver status: optimal
 
 === Job assignments to clusters ===
-- Job 0 assigned to Cluster 2 (default: 0), relocation cost: 2
+- Job 0 assigned to Cluster 1 (default: 0), relocation cost: 2
 - Job 1 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 2 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 3 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 4 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 5 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 6 assigned to Cluster 2 (default: 0), relocation cost: 2
+- Job 6 assigned to Cluster 1 (default: 0), relocation cost: 2
 - Job 7 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 8 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 9 assigned to Cluster 0 (default: 0), relocation cost: 0
@@ -85,7 +85,7 @@ Solver status: optimal
 - Job 25 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 26 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 27 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 28 assigned to Cluster 2 (default: 0), relocation cost: 5
+- Job 28 assigned to Cluster 1 (default: 0), relocation cost: 5
 - Job 29 assigned to Cluster 2 ...(truncated)
 ```
 

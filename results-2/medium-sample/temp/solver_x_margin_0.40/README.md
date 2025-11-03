@@ -5,7 +5,7 @@
 **Solver Mode:** X  
 **Dataset:** medium-sample  
 **Margin:** 0.40  
-**Timestamp:** 2025-10-28 00:23:40  
+**Timestamp:** 2025-11-03 23:15:49  
 **Timeout:** 600 seconds  
 
 ## 📊 Execution Results
@@ -14,7 +14,7 @@
 |--------|-------|
 | **Status** | ✅ infeasible |
 | **Return Code** | 0 |
-| **Execution Time** | 6.25 seconds |
+| **Execution Time** | 6.97 seconds |
 | **Optimal Value** | N/A |
 | **Feasibility** | ❌ Infeasible |
 

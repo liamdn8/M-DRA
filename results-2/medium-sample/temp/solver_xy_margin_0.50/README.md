@@ -5,23 +5,29 @@
 **Solver Mode:** XY  
 **Dataset:** medium-sample  
 **Margin:** 0.50  
-**Timestamp:** 2025-10-28 00:01:01  
+**Timestamp:** 2025-11-03 23:26:32  
 **Timeout:** 600 seconds  
 
 ## 📊 Execution Results
 
 | Metric | Value |
 |--------|-------|
-| **Status** | ✅ optimal_inaccurate |
+| **Status** | ✅ optimal |
 | **Return Code** | 0 |
-| **Execution Time** | 46.89 seconds |
-| **Optimal Value** | 37.0 |
-| **Feasibility** | ⚠️ Unknown |
+| **Execution Time** | 35.15 seconds |
+| **Optimal Value** | 36.0 |
+| **Feasibility** | ✅ Feasible |
 
 ## 🎯 Solution Summary
 
-- **Status:** ⚠️ optimal_inaccurate
-- **Execution completed but results unclear**
+- **Total Relocations:** 36.0
+- **Jobs Assigned:** 61
+- **Jobs Relocated:** 2
+- **Optimization Success:** ✅ Optimal solution found
+
+### Performance Metrics
+- **Avg Time per Job:** 0.576 seconds
+- **Solution Quality:** 36 relocations needed
 
 
 ## 📁 Output Files
@@ -48,7 +54,7 @@ python3 main.py \
 ```
 Running Solver XY...
 Solver input files generated successfully.
-Solver status: optimal_inaccurate
+Solver status: optimal
 
 === Job assignments to clusters ===
 - Job 0 assigned to Cluster 0 (default: 0), relocation cost: 0
@@ -64,7 +70,7 @@ Solver status: optimal_inaccurate
 - Job 10 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 11 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 12 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 13 assigned to Cluster 0 (default: 0), relocation cost: 0
+- Job 13 assigned to Cluster 1 (default: 0), relocation cost: 4
 - Job 14 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 15 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 16 assigned to Cluster 0 (default: 0), relocation cost: 0
@@ -80,7 +86,7 @@ Solver status: optimal_inaccurate
 - Job 26 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 27 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 28 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 29 assigned t...(truncated)
+- Job 29 assigned to Cluster 0...(truncated)
 ```
 
 ### Standard Error
@@ -89,8 +95,6 @@ Solver status: optimal_inaccurate
   warnings.warn("Objective contains too many subexpressions. "
 /home/liamdn/M-DRA/lib/python3.10/site-packages/cvxpy/reductions/solvers/solving_chain.py:418: UserWarning: The problem has an expression with dimension greater than 2. Defaulting to the SCIPY backend for canonicalization.
   warnings.warn(UserWarning(
-/home/liamdn/M-DRA/lib/python3.10/site-packages/cvxpy/problems/problem.py:1504: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
-  warnings.warn(
 
 ```
 
@@ -103,7 +107,7 @@ Solver status: optimal_inaccurate
 
 ## 💡 Notes
 
-- 37 job relocations were necessary to satisfy constraints
+- 36 job relocations were necessary to satisfy constraints
 
 ---
 

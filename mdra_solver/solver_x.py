@@ -173,11 +173,20 @@ def main():
     objective = cp.Minimize(relocation_cost)
 
     problem = cp.Problem(objective, constraints)
+    # problem.solve(
+    #     solver=cp.GLPK_MI,
+    #     verbose=False,
+    #     tm_lim=1800000,  # 30 minutes (1800 seconds in milliseconds)
+    #     mip_gap=0.02     # Accept 2% gap from optimal
+    # )
+
     problem.solve(
-        solver=cp.GLPK_MI,
-        verbose=False,
-        tm_lim=1800000,  # 30 minutes (1800 seconds in milliseconds)
-        mip_gap=0.02     # Accept 2% gap from optimal
+        solver=cp.SCIP,
+        verbose=False,  # Set to True to see detailed progress
+        scip_params={
+            "limits/time": 1800,      # 30 minutes
+            "limits/gap": 0.001       # 0.1% optimality gap (tighter than before)
+        }
     )
 
     print(f"Solver status: {problem.status}")

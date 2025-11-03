@@ -5,23 +5,29 @@
 **Solver Mode:** XY  
 **Dataset:** small-sample  
 **Margin:** 0.45  
-**Timestamp:** 2025-10-27 23:19:12  
+**Timestamp:** 2025-11-03 23:06:43  
 **Timeout:** 600 seconds  
 
 ## 📊 Execution Results
 
 | Metric | Value |
 |--------|-------|
-| **Status** | ✅ optimal_inaccurate |
+| **Status** | ✅ optimal |
 | **Return Code** | 0 |
-| **Execution Time** | 30.69 seconds |
-| **Optimal Value** | 29.0 |
-| **Feasibility** | ⚠️ Unknown |
+| **Execution Time** | 21.09 seconds |
+| **Optimal Value** | 28.0 |
+| **Feasibility** | ✅ Feasible |
 
 ## 🎯 Solution Summary
 
-- **Status:** ⚠️ optimal_inaccurate
-- **Execution completed but results unclear**
+- **Total Relocations:** 28.0
+- **Jobs Assigned:** 40
+- **Jobs Relocated:** 5
+- **Optimization Success:** ✅ Optimal solution found
+
+### Performance Metrics
+- **Avg Time per Job:** 0.527 seconds
+- **Solution Quality:** 28 relocations needed
 
 
 ## 📁 Output Files
@@ -48,16 +54,16 @@ python3 main.py \
 ```
 Running Solver XY...
 Solver input files generated successfully.
-Solver status: optimal_inaccurate
+Solver status: optimal
 
 === Job assignments to clusters ===
-- Job 0 assigned to Cluster 0 (default: 0), relocation cost: 0
+- Job 0 assigned to Cluster 1 (default: 0), relocation cost: 2
 - Job 1 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 2 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 3 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 4 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 5 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 6 assigned to Cluster 0 (default: 0), relocation cost: 0
+- Job 6 assigned to Cluster 1 (default: 0), relocation cost: 2
 - Job 7 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 8 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 9 assigned to Cluster 0 (default: 0), relocation cost: 0
@@ -79,8 +85,8 @@ Solver status: optimal_inaccurate
 - Job 25 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 26 assigned to Cluster 0 (default: 0), relocation cost: 0
 - Job 27 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 28 assigned to Cluster 0 (default: 0), relocation cost: 0
-- Job 29 assigned t...(truncated)
+- Job 28 assigned to Cluster 1 (default: 0), relocation cost: 5
+- Job 29 assigned to Cluster 2...(truncated)
 ```
 
 ### Standard Error
@@ -89,8 +95,6 @@ Solver status: optimal_inaccurate
   warnings.warn("Objective contains too many subexpressions. "
 /home/liamdn/M-DRA/lib/python3.10/site-packages/cvxpy/reductions/solvers/solving_chain.py:418: UserWarning: The problem has an expression with dimension greater than 2. Defaulting to the SCIPY backend for canonicalization.
   warnings.warn(UserWarning(
-/home/liamdn/M-DRA/lib/python3.10/site-packages/cvxpy/problems/problem.py:1504: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
-  warnings.warn(
 
 ```
 
@@ -103,7 +107,7 @@ Solver status: optimal_inaccurate
 
 ## 💡 Notes
 
-- 29 job relocations were necessary to satisfy constraints
+- 28 job relocations were necessary to satisfy constraints
 
 ---
 
