@@ -14,13 +14,13 @@ This dataset contains real workload data converted to M-DRA format with a 6-hour
 
 ### Dataset Statistics
 
-**Jobs:** 965
+**Jobs:** 209
 - Start times: 0 - 300 minutes
 - Duration range: 5-60 minutes
 - Avg duration: 18.9 minutes
 - Total CPU requested: 1790.0 cores
 - Total Memory requested: 6010.1 GB
-- Jobs with SRIOV: 29
+- Jobs with SRIOV: 10
 
 **Nodes:** 26
 - Per cluster: {0: 13, 1: 3, 2: 1, 3: 9}

@@ -5,8 +5,8 @@
 Compact dataset designed for quick validation of all three solver modes (X, Y, XY).
 
 **Purpose**: Fast testing and validation of solver functionality  
-**Size**: 15 jobs, 8 nodes, 3 clusters, 10 timeslices  
-**Generation**: Random sampling with controlled characteristics
+**Size**: 13 jobs, 8 nodes, 3 clusters, 10 timeslices  
+**Generation**: Staggered load distribution with controlled characteristics
 
 ## Dataset Characteristics
 
@@ -14,48 +14,51 @@ Compact dataset designed for quick validation of all three solver modes (X, Y, X
 
 | Cluster ID | Type | CPU Cap | Memory Cap | VF Cap | Features |
 |------------|------|---------|------------|--------|----------|
-| 0 | Regular | 40.0 | 100000 Mi | 0 | No SRIOV, No MANO |
-| 1 | SRIOV | 50.0 | 120000 Mi | 64 | SRIOV only |
-| 2 | Full | 60.0 | 150000 Mi | 128 | MANO + SRIOV |
+| 0 | Regular | 20.0 | 55000 Mi | 0 | No SRIOV, No MANO |
+| 1 | SRIOV | 25.0 | 65000 Mi | 36 | SRIOV only |
+| 2 | Full | 35.0 | 90000 Mi | 70 | MANO + SRIOV |
 
 ### Nodes (8 total)
 
 - **Cluster 0**: 3 nodes (regular-node-1, 2, 3)
-  - CPU: 12-16 cores
-  - Memory: 30000-40000 Mi
+  - CPU: 8-12 cores each
+  - Memory: 25000-30000 Mi
   - VF: 0
 
 - **Cluster 1**: 2 nodes (sriov-node-1, 2)
-  - CPU: 16-18 cores
-  - Memory: 40000-45000 Mi
-  - VF: 32 each
+  - CPU: 10-12 cores each
+  - Memory: 30000-33000 Mi
+  - VF: 18 each
 
 - **Cluster 2**: 3 nodes (mano-sriov-node-1, 2, 3)
-  - CPU: 18-22 cores
-  - Memory: 45000-65000 Mi
-  - VF: 40-48
+  - CPU: 12-18 cores each
+  - Memory: 28000-35000 Mi
+  - VF: 20-30 each
 
-### Jobs (15 total)
+### Jobs (13 total)
 
-**Cluster 0 Jobs (5)** - Regular workloads:
-- web-app, api-service, cache-server, db-replica, monitoring
+**Regular Jobs (5)** - No special requirements:
+- web-heavy-1, web-heavy-2, api-heavy, cache-heavy, db-light
 - No VF requirements, no MANO
-- CPU: 2.0-4.0 cores
-- Memory: 5000-13000 Mi
-
-**Cluster 1 Jobs (4)** - SRIOV workloads:
-- dpdk-app-1, dpdk-app-2, network-func-1, network-func-2
-- VF required: 4-10
-- No MANO
-- CPU: 3.0-5.4 cores
-- Memory: 8000-17000 Mi
-
-**Cluster 2 Jobs (6)** - Mixed requirements:
-- 2 MANO-only jobs (mano-vnf-1, mano-vnf-2)
-- 2 SRIOV-only jobs (sriov-app-1, sriov-app-2)
-- 2 MANO+SRIOV jobs (mano-sriov-1, mano-sriov-2)
 - CPU: 4.0-6.5 cores
-- Memory: 10000-20000 Mi
+- Memory: 10000-15000 Mi
+- Start times: 2-7
+
+**SRIOV Jobs (6)** - VF required:
+- dpdk-light, dpdk-heavy-1, dpdk-heavy-2, network-heavy, sriov-heavy-1, sriov-heavy-2
+- VF required: 7-14
+- No MANO
+- CPU: 3.5-7.0 cores
+- Memory: 8000-15000 Mi
+- Start times: 1-8
+
+**MANO Jobs (2)** - MANO support required:
+- mano-warm, mano-heavy
+- MANO required: 1
+- VF: 0 or 14
+- CPU: 4.5-7.5 cores
+- Memory: 12000-17000 Mi
+- Start times: 2-9
 
 ### Time Window
 
