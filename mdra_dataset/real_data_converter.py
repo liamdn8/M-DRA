@@ -87,15 +87,16 @@ class RealDataConverter:
     def generate_realistic_duration(self, workload_type: str, has_sriov: bool, cluster_id: int = None) -> int:
         """Generate realistic job duration in quarter-hour intervals based on workload characteristics."""
         # Define duration options in minutes (quarter-hour multiples)
+        # REDUCED durations to fit more jobs in early window
         if has_sriov:
-            # SRIOV jobs for performance testing - longer duration
-            duration_options = [120, 135, 150, 165, 180]  # 2h to 3h in 15min steps
+            # SRIOV jobs - reduced from 120-180 to 60-120 minutes
+            duration_options = [60, 75, 90, 105, 120]  # 1h to 2h
         elif 'database' in workload_type.lower() or 'ml' in workload_type.lower():
-            # Database or ML workloads - longer duration
-            duration_options = [60, 75, 90, 105, 120, 135, 150, 165, 180]  # 1h to 3h
+            # Database or ML workloads - reduced from 60-180 to 30-90 minutes
+            duration_options = [30, 45, 60, 75, 90]  # 30min to 1.5h
         else:
-            # Normal workloads
-            duration_options = [15, 30, 45, 60]  # 15min to 1h
+            # Normal workloads - reduced from 15-60 to 15-45 minutes
+            duration_options = [15, 30, 45]  # 15min to 45min
         
         # Randomly select from available options
         duration_minutes = random.choice(duration_options)
@@ -178,7 +179,7 @@ class RealDataConverter:
     def generate_individual_job_timing(self, duration, cluster_id):
         """
         Generate start and end timing for an individual job.
-        Uses 15-minute intervals (60 timeslices) with early preference, no upper limit.
+        STRONG preference for first 3 hours (0-720 timeslices) to reflect user habits.
         """
         import random
         import math
@@ -186,30 +187,226 @@ class RealDataConverter:
         # 15-minute intervals = 60 timeslices (15 seconds * 60 = 15 minutes)
         TIMESLICES_PER_15MIN = 60
         
-        # Early-weighted distribution for k8s-cicd cluster 
-        if cluster_id == 0:  # k8s-cicd
-            # Use exponential decay to favor earlier 15-minute intervals
-            rand = random.random()
-            
-            # Transform using exponential decay (favoring smaller intervals)
-            lambda_param = 0.05  # Controls strength of early preference
-            exp_transform = -math.log(1 - rand * (1 - math.exp(-lambda_param * 100))) / lambda_param
-            
-            # Convert to 15-minute intervals (starting from interval 0)
-            interval_15min = int(max(0, exp_transform))
-            
-            # Convert to actual timeslice (no upper limit)
-            start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
-        else:
-            # Random distribution for other clusters, also using 15-minute intervals
-            # Choose a random 15-minute interval (0 to 99 for reasonable range)
-            interval_15min = random.randint(0, 99)
-            start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+        # First 3 hours = 720 timeslices (peak activity period)
+        PEAK_PERIOD_END = 720
         
-        # Calculate end time
+        # Calculate max allowed start time to fit within schedule window
+        max_start_time = max(1, self.TOTAL_TIMESLICES - duration - 1)
+        
+        # VERY strong preference for k8s-cicd to start in first 3 hours
+        if cluster_id == 0:  # k8s-cicd
+            # 95% of jobs should start in first 3 hours
+            if random.random() < 0.95:
+                # Use exponential decay heavily favoring early start
+                rand = random.random()
+                
+                # Very strong lambda for concentration in first 3 hours
+                lambda_param = 0.08  # Increased from 0.02 to concentrate more
+                exp_transform = -math.log(1 - rand * (1 - math.exp(-lambda_param * 48))) / lambda_param
+                
+                # Convert to 15-minute intervals within first 3 hours (0-48 intervals = 0-720 timeslices)
+                interval_15min = int(min(max(0, exp_transform), 47))  # Cap at 47 = 2h 45min
+                
+                start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+            else:
+                # 10% can start anywhere in remaining time (background jobs)
+                max_interval = max(0, (max_start_time - 1) // TIMESLICES_PER_15MIN)
+                # Start from interval 48 onwards (after 3 hours)
+                interval_15min = random.randint(48, max_interval) if max_interval > 48 else 48
+                start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+            
+            # Ensure within bounds
+            start_time = min(start_time, max_start_time)
+        else:
+            # Other clusters: 70% in first 3 hours, 30% distributed after
+            if random.random() < 0.70:
+                # Start in first 3 hours
+                max_early_interval = min(47, (PEAK_PERIOD_END - 1) // TIMESLICES_PER_15MIN)
+                interval_15min = random.randint(0, max_early_interval)
+                start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+            else:
+                # Start after 3 hours (background jobs)
+                max_interval = max(0, (max_start_time - 1) // TIMESLICES_PER_15MIN)
+                min_interval = (PEAK_PERIOD_END // TIMESLICES_PER_15MIN)
+                if max_interval > min_interval:
+                    interval_15min = random.randint(min_interval, max_interval)
+                else:
+                    interval_15min = min_interval
+                start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+        
+        # Calculate end time (must be within window)
         end_time = start_time + duration
         
+        # Final safety check
+        if end_time >= self.TOTAL_TIMESLICES:
+            # Adjust start_time to ensure end_time fits
+            start_time = max(1, self.TOTAL_TIMESLICES - duration - 1)
+            end_time = start_time + duration
+        
         return start_time, end_time
+    
+    def rebalance_jobs_for_capacity(self, jobs_df, nodes_df, max_utilization=0.95):
+        """
+        Rebalance job start times to ensure no cluster exceeds max_utilization.
+        Uses iterative approach with smarter job movement.
+        """
+        import numpy as np
+        
+        print(f"\n🔄 Rebalancing jobs to ensure max {max_utilization*100:.0f}% utilization...")
+        
+        # Calculate cluster capacities
+        cluster_capacities = {}
+        for cluster_id in jobs_df['default_cluster'].unique():
+            cluster_nodes = nodes_df[nodes_df['default_cluster'] == cluster_id]
+            cluster_capacities[cluster_id] = {
+                'cpu': cluster_nodes['cpu_cap'].sum(),
+                'mem': cluster_nodes['mem_cap'].sum()
+            }
+        
+        # Sort jobs by size (larger jobs first - easier to place)
+        jobs_df = jobs_df.copy()
+        jobs_df['job_size'] = jobs_df['cpu_req'] + jobs_df['mem_req'] / 1000
+        jobs_df = jobs_df.sort_values('job_size', ascending=False).reset_index(drop=True)
+        
+        # Track utilization at each timeslice
+        max_iterations = 15
+        moved_count = 0
+        
+        for iteration in range(max_iterations):
+            # Calculate current utilization
+            utilization = {}
+            for t in range(self.TOTAL_TIMESLICES):
+                utilization[t] = {cid: {'cpu': 0, 'mem': 0} for cid in cluster_capacities.keys()}
+            
+            # Calculate workload for each timeslice
+            for _, job in jobs_df.iterrows():
+                cluster_id = job['default_cluster']
+                start_t = int(job['start_time'])
+                end_t = min(start_t + int(job['duration']), self.TOTAL_TIMESLICES)
+                for t in range(start_t, end_t):
+                    utilization[t][cluster_id]['cpu'] += job['cpu_req']
+                    utilization[t][cluster_id]['mem'] += job['mem_req']
+            
+            # Find all overloaded timeslices
+            overloaded_times = set()
+            for t, clusters in utilization.items():
+                for cluster_id, resources in clusters.items():
+                    if cluster_id in cluster_capacities:
+                        cpu_util = resources['cpu'] / cluster_capacities[cluster_id]['cpu']
+                        mem_util = resources['mem'] / cluster_capacities[cluster_id]['mem']
+                        if cpu_util > max_utilization or mem_util > max_utilization:
+                            overloaded_times.add((t, cluster_id))
+            
+            if not overloaded_times:
+                print(f"  ✅ Iteration {iteration + 1}: No overload detected! (Moved {moved_count} jobs total)")
+                break
+            
+            print(f"  ⚙️  Iteration {iteration + 1}: Found {len(overloaded_times)} overloaded timeslices...")
+            
+            # For each overloaded timeslice, try to move jobs
+            jobs_moved_this_iter = 0
+            for t, cluster_id in list(overloaded_times)[:30]:  # Process top 30
+                # Find jobs that overlap with this timeslice
+                overlapping_jobs = jobs_df[
+                    (jobs_df['default_cluster'] == cluster_id) &
+                    (jobs_df['start_time'] <= t) &
+                    (jobs_df['start_time'] + jobs_df['duration'] > t)
+                ].copy()
+                
+                if len(overlapping_jobs) == 0:
+                    continue
+                
+                # Try to move jobs that start close to this timeslice
+                candidates = overlapping_jobs[overlapping_jobs['start_time'] >= t - 120].sort_values('job_size')
+                
+                for idx in candidates.head(2).index:  # Try moving 2 jobs per overloaded timeslice
+                    job = jobs_df.loc[idx]
+                    duration = int(job['duration'])
+                    old_start = int(job['start_time'])
+                    
+                    # Find better start times by checking utilization
+                    best_time = None
+                    best_max_util = float('inf')
+                    
+                    # PEAK PERIOD preference: Try to keep jobs in 0-3h (0-720) if possible
+                    PEAK_PERIOD = 720
+                    
+                    # If job is in peak period, first try other positions within peak period
+                    time_ranges = []
+                    if old_start <= PEAK_PERIOD:
+                        # Try staying in peak period first
+                        time_ranges.append(range(0, min(PEAK_PERIOD, self.TOTAL_TIMESLICES - duration), 60))
+                        # Then try later period if needed
+                        time_ranges.append(range(PEAK_PERIOD, self.TOTAL_TIMESLICES - duration, 120))
+                    else:
+                        # Job already in late period, can try anywhere
+                        time_ranges.append(range(0, self.TOTAL_TIMESLICES - duration, 120))
+                    
+                    # Try different time windows
+                    for time_range in time_ranges:
+                        for window_start in time_range:
+                            for offset in [0, 60, 30, 90]:  # Try different offsets within window
+                                new_start = window_start + offset
+                                if new_start + duration >= self.TOTAL_TIMESLICES:
+                                    continue
+                                
+                                # Calculate max utilization if job moved here
+                                max_util = 0
+                                valid = True
+                                for t_check in range(new_start, new_start + duration):
+                                    if t_check >= self.TOTAL_TIMESLICES:
+                                        valid = False
+                                        break
+                                    if t_check in utilization and cluster_id in utilization[t_check]:
+                                        # Remove old job contribution
+                                        cpu_at_t = utilization[t_check][cluster_id]['cpu']
+                                        mem_at_t = utilization[t_check][cluster_id]['mem']
+                                        
+                                        if old_start <= t_check < old_start + duration:
+                                            cpu_at_t -= job['cpu_req']
+                                            mem_at_t -= job['mem_req']
+                                        
+                                        # Add new job contribution
+                                        cpu_at_t += job['cpu_req']
+                                        mem_at_t += job['mem_req']
+                                        
+                                        cpu_u = cpu_at_t / cluster_capacities[cluster_id]['cpu']
+                                        mem_u = mem_at_t / cluster_capacities[cluster_id]['mem']
+                                        max_util = max(max_util, cpu_u, mem_u)
+                                
+                                if valid and max_util < best_max_util and max_util < max_utilization:
+                                    best_max_util = max_util
+                                    best_time = new_start
+                        
+                        # If found acceptable position in preferred range, stop searching
+                        if best_time is not None:
+                            break
+                    
+                    # Move job if better position found
+                    if best_time is not None and best_time != old_start:
+                        jobs_df.at[idx, 'start_time'] = best_time
+                        moved_count += 1
+                        jobs_moved_this_iter += 1
+                        
+                        # Update utilization for next check
+                        for t_update in range(old_start, min(old_start + duration, self.TOTAL_TIMESLICES)):
+                            if t_update in utilization and cluster_id in utilization[t_update]:
+                                utilization[t_update][cluster_id]['cpu'] -= job['cpu_req']
+                                utilization[t_update][cluster_id]['mem'] -= job['mem_req']
+                        
+                        for t_update in range(best_time, min(best_time + duration, self.TOTAL_TIMESLICES)):
+                            if t_update in utilization and cluster_id in utilization[t_update]:
+                                utilization[t_update][cluster_id]['cpu'] += job['cpu_req']
+                                utilization[t_update][cluster_id]['mem'] += job['mem_req']
+            
+            if jobs_moved_this_iter == 0:
+                print(f"  ⚠️  Could not move any more jobs, stopping at iteration {iteration + 1}")
+                break
+        
+        # Drop temporary column
+        jobs_df = jobs_df.drop(columns=['job_size'])
+        
+        return jobs_df
 
     def generate_schedule_timing(self, jobs, cluster_name='k8s-cicd'):
         """
@@ -633,6 +830,9 @@ class RealDataConverter:
         print(f"\n🔄 Generating {len(self.clusters_df)} clusters with nodes...")
         nodes_df = self.generate_nodes(jobs_df)
         
+        # Rebalance jobs to avoid overload (must be done after nodes are generated)
+        jobs_df = self.rebalance_jobs_for_capacity(jobs_df, nodes_df, max_utilization=0.95)
+        
         print("🔄 Calculating cluster capacities...")
         clusters_cap_df = self.generate_clusters_cap(nodes_df, jobs_df)
         
@@ -700,8 +900,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Convert real data
+  # Convert real data with default 8-hour window (22:00-06:00)
   python real_data_converter.py data/real-data/export_workloads.csv
+  
+  # Convert with 6-hour window (0:00-06:00) for converted2
+  python real_data_converter.py data/real-data/export_workloads.csv --output data/converted2 --start-hour 0 --end-hour 6
   
   # Specify custom output directory
   python real_data_converter.py data/real-data/export_workloads.csv --output data/converted-new
@@ -715,11 +918,32 @@ Examples:
                        help='Cluster definition CSV file (default: data/real-data/export_clusters.csv)')
     parser.add_argument('--nodes', '-n', default='data/real-data/export_nodes.csv',
                        help='Node definition CSV file (default: data/real-data/export_nodes.csv)')
+    parser.add_argument('--start-hour', type=int, default=22,
+                       help='Schedule start hour (default: 22 for 22:00)')
+    parser.add_argument('--end-hour', type=int, default=6,
+                       help='Schedule end hour (default: 6 for 06:00)')
+    parser.add_argument('--timeslice-seconds', type=int, default=15,
+                       help='Timeslice duration in seconds (default: 15)')
     
     args = parser.parse_args()
     
     try:
         converter = RealDataConverter(args.input_file, args.clusters, args.nodes, args.output)
+        
+        # Apply schedule configuration from command line
+        converter.SCHEDULE_START_HOUR = args.start_hour
+        converter.SCHEDULE_END_HOUR = args.end_hour
+        converter.TIMESLICE_SECONDS = args.timeslice_seconds
+        
+        # Recalculate schedule parameters
+        if args.start_hour <= args.end_hour:
+            converter.TOTAL_SCHEDULE_HOURS = args.end_hour - args.start_hour
+        else:
+            converter.TOTAL_SCHEDULE_HOURS = (24 - args.start_hour) + args.end_hour
+        
+        converter.TIMESLICES_PER_HOUR = 3600 // args.timeslice_seconds
+        converter.TOTAL_TIMESLICES = converter.TOTAL_SCHEDULE_HOURS * converter.TIMESLICES_PER_HOUR
+        converter.TIMESLICES_PER_15MIN = (15 * 60) // args.timeslice_seconds
         files = converter.convert()
         
         print(f"\n🎉 Conversion completed successfully!")

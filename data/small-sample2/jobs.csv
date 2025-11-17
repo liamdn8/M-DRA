@@ -1,0 +1,14 @@
+id,name,start_time,duration,cpu_req,mem_req,vf_req,mano_req,default_cluster,relocation_cost
+0,web-heavy-1,2,3,4.5,10000,0,0,0,3
+1,web-heavy-2,2,2,4.0,9500,0,0,0,4
+2,api-heavy,3,2,5.0,11000,0,0,0,5
+3,cache-heavy,3,2,4.5,10500,0,0,0,6
+4,db-light,7,2,2.5,6000,0,0,0,7
+5,dpdk-light,1,2,3.5,8000,7,0,1,5
+6,dpdk-heavy-1,5,3,6.5,14000,11,0,1,6
+7,dpdk-heavy-2,5,2,5.5,13000,10,0,1,7
+8,network-heavy,6,2,5.0,12000,9,0,1,8
+9,mano-warm,2,2,4.5,12000,0,1,2,6
+10,sriov-heavy-1,8,3,7.5,18000,14,0,2,7
+11,sriov-heavy-2,8,2,6.5,16000,12,0,2,8
+12,mano-heavy,9,2,8.0,20000,15,1,2,11
