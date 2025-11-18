@@ -415,9 +415,8 @@ python3 main.py \\
             min_margin = self.min_margins.get(solver)
             solver_data['Min_Margin'] = min_margin if min_margin is not None else 'N/A'
             
-            # Add feasibility status for key margins
-            key_margins = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5]
-            for margin in key_margins:
+            # Add feasibility status for ALL tested margins (not just key ones)
+            for margin in sorted(self.margins, reverse=True):  # 1.0, 0.95, 0.9, ..., 0.1
                 if margin in self.results.get(solver, {}):
                     result = self.results[solver][margin]
                     if result.get('success') and result.get('feasible'):

@@ -1,0 +1,34 @@
+{
+  "experiment": "Time Compression - Decreasing Margins",
+  "timestamp": "2025-11-18T10:55:48.452245",
+  "margin_range": "1.0 \u2192 0.1 (step 0.05)",
+  "datasets": [
+    {
+      "name": "compressed-20x-5m",
+      "description": "5-minute compression (20x)",
+      "path": "data/compressed-20x-5m",
+      "success": true,
+      "output_dir": "results-4/compressed-20x-5m"
+    },
+    {
+      "name": "compressed-60x-15m",
+      "description": "15-minute compression (60x)",
+      "path": "data/compressed-60x-15m",
+      "success": true,
+      "output_dir": "results-4/compressed-60x-15m"
+    },
+    {
+      "name": "compressed-120x-30m",
+      "description": "30-minute compression (120x)",
+      "path": "data/compressed-120x-30m",
+      "success": true,
+      "output_dir": "results-4/compressed-120x-30m"
+    }
+  ],
+  "summary": {
+    "total_datasets": 3,
+    "completed": 3,
+    "failed": 0,
+    "success_rate": "100.0%"
+  }
+}

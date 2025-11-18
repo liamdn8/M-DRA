@@ -22,12 +22,16 @@ import random
 class RealDataConverter:
     """Convert real system data to M-DRA format."""
     
-    def __init__(self, input_file: str, cluster_file: str = None, nodes_file: str = None, output_dir: str = "data/converted"):
+    def __init__(self, input_file: str, cluster_file: str = None, nodes_file: str = None, 
+                 output_dir: str = "data/converted", staggered_peak_mode: bool = False):
         self.input_file = Path(input_file)
         self.cluster_file = Path(cluster_file) if cluster_file else Path("data/real-data/export_clusters.csv")
         self.nodes_file = Path(nodes_file) if nodes_file else Path("data/real-data/export_nodes.csv")
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+        
+        # Workload distribution mode
+        self.staggered_peak_mode = staggered_peak_mode
         
         # Timing constants (15-second timeslices)
         self.TIMESLICE_SECONDS = 15
@@ -176,10 +180,14 @@ class RealDataConverter:
         # Random selection from available clusters
         return available_clusters.sample(1).iloc[0]['id']
     
-    def generate_individual_job_timing(self, duration, cluster_id):
+    def generate_individual_job_timing(self, duration, cluster_id, staggered_peak_mode=False):
         """
         Generate start and end timing for an individual job.
-        STRONG preference for first 3 hours (0-720 timeslices) to reflect user habits.
+        
+        Args:
+            duration: Job duration in timeslices
+            cluster_id: Cluster ID (0=k8s-cicd, 1=k8s-mano, 2=pat-141, 3=pat-171)
+            staggered_peak_mode: If True, each cluster peaks at different time windows
         """
         import random
         import math
@@ -187,52 +195,116 @@ class RealDataConverter:
         # 15-minute intervals = 60 timeslices (15 seconds * 60 = 15 minutes)
         TIMESLICES_PER_15MIN = 60
         
-        # First 3 hours = 720 timeslices (peak activity period)
-        PEAK_PERIOD_END = 720
-        
         # Calculate max allowed start time to fit within schedule window
         max_start_time = max(1, self.TOTAL_TIMESLICES - duration - 1)
         
-        # VERY strong preference for k8s-cicd to start in first 3 hours
-        if cluster_id == 0:  # k8s-cicd
-            # 95% of jobs should start in first 3 hours
-            if random.random() < 0.95:
-                # Use exponential decay heavily favoring early start
-                rand = random.random()
-                
-                # Very strong lambda for concentration in first 3 hours
-                lambda_param = 0.08  # Increased from 0.02 to concentrate more
-                exp_transform = -math.log(1 - rand * (1 - math.exp(-lambda_param * 48))) / lambda_param
-                
-                # Convert to 15-minute intervals within first 3 hours (0-48 intervals = 0-720 timeslices)
-                interval_15min = int(min(max(0, exp_transform), 47))  # Cap at 47 = 2h 45min
-                
-                start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
-            else:
-                # 10% can start anywhere in remaining time (background jobs)
-                max_interval = max(0, (max_start_time - 1) // TIMESLICES_PER_15MIN)
-                # Start from interval 48 onwards (after 3 hours)
-                interval_15min = random.randint(48, max_interval) if max_interval > 48 else 48
-                start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+        if staggered_peak_mode:
+            # STAGGERED PEAK MODE: Each cluster has dedicated peak window
+            # Simulate realistic scenario where clusters peak at different times
             
-            # Ensure within bounds
-            start_time = min(start_time, max_start_time)
-        else:
-            # Other clusters: 70% in first 3 hours, 30% distributed after
-            if random.random() < 0.70:
-                # Start in first 3 hours
-                max_early_interval = min(47, (PEAK_PERIOD_END - 1) // TIMESLICES_PER_15MIN)
-                interval_15min = random.randint(0, max_early_interval)
-                start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+            # Define time windows (6 hours = 1440 timeslices)
+            # Each cluster gets 1.5 hour peak window (360 timeslices)
+            if cluster_id == 0:  # k8s-cicd: Hour 0-1.5 (0:00-1:30)
+                peak_start = 0
+                peak_end = 360
+                peak_probability = 0.90  # 90% of jobs in peak window
+            elif cluster_id == 1:  # k8s-mano: Hour 1.5-3 (1:30-3:00)
+                peak_start = 360
+                peak_end = 720
+                peak_probability = 0.85  # 85% of jobs in peak window
+            elif cluster_id == 2:  # pat-141: Hour 3-4.5 (3:00-4:30)
+                peak_start = 720
+                peak_end = 1080
+                peak_probability = 0.85  # 85% of jobs in peak window
+            else:  # pat-171: Hour 4.5-6 (4:30-6:00)
+                peak_start = 1080
+                peak_end = 1440
+                peak_probability = 0.85  # 85% of jobs in peak window
+            
+            # Assign job to peak or off-peak period
+            if random.random() < peak_probability:
+                # Peak period: Concentrated load
+                # Use exponential distribution within peak window
+                rand = random.random()
+                lambda_param = 0.15  # Controls concentration at start of peak
+                
+                peak_duration = peak_end - peak_start
+                exp_transform = -math.log(1 - rand * (1 - math.exp(-lambda_param * (peak_duration / TIMESLICES_PER_15MIN)))) / lambda_param
+                
+                # Convert to timeslices within peak window
+                offset = int(min(exp_transform * TIMESLICES_PER_15MIN, peak_duration - duration))
+                start_time = peak_start + offset
+                
+                # Ensure job fits within window
+                if start_time + duration > peak_end:
+                    start_time = peak_end - duration
+                start_time = max(1, start_time)
             else:
-                # Start after 3 hours (background jobs)
-                max_interval = max(0, (max_start_time - 1) // TIMESLICES_PER_15MIN)
-                min_interval = (PEAK_PERIOD_END // TIMESLICES_PER_15MIN)
-                if max_interval > min_interval:
-                    interval_15min = random.randint(min_interval, max_interval)
+                # Off-peak period: Distributed background jobs
+                # Randomly place in non-peak windows
+                non_peak_intervals = []
+                
+                # Before peak
+                if peak_start > 60:
+                    non_peak_intervals.extend(range(0, (peak_start - 60) // TIMESLICES_PER_15MIN))
+                
+                # After peak (if space available)
+                if peak_end < self.TOTAL_TIMESLICES - 60:
+                    end_intervals = (self.TOTAL_TIMESLICES - peak_end - 60) // TIMESLICES_PER_15MIN
+                    non_peak_intervals.extend(range((peak_end + 60) // TIMESLICES_PER_15MIN, 
+                                                    (peak_end + 60) // TIMESLICES_PER_15MIN + end_intervals))
+                
+                if non_peak_intervals:
+                    interval_15min = random.choice(non_peak_intervals)
+                    start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
                 else:
-                    interval_15min = min_interval
-                start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+                    # Fallback to peak if no off-peak space
+                    start_time = peak_start + random.randint(0, max(1, (peak_end - peak_start - duration) // 2))
+                
+        else:
+            # ORIGINAL MODE: All clusters favor early start
+            PEAK_PERIOD_END = 720  # First 3 hours
+            
+            # VERY strong preference for k8s-cicd to start in first 3 hours
+            if cluster_id == 0:  # k8s-cicd
+                # 95% of jobs should start in first 3 hours
+                if random.random() < 0.95:
+                    # Use exponential decay heavily favoring early start
+                    rand = random.random()
+                    
+                    # Very strong lambda for concentration in first 3 hours
+                    lambda_param = 0.08  # Increased from 0.02 to concentrate more
+                    exp_transform = -math.log(1 - rand * (1 - math.exp(-lambda_param * 48))) / lambda_param
+                    
+                    # Convert to 15-minute intervals within first 3 hours (0-48 intervals = 0-720 timeslices)
+                    interval_15min = int(min(max(0, exp_transform), 47))  # Cap at 47 = 2h 45min
+                    
+                    start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+                else:
+                    # 10% can start anywhere in remaining time (background jobs)
+                    max_interval = max(0, (max_start_time - 1) // TIMESLICES_PER_15MIN)
+                    # Start from interval 48 onwards (after 3 hours)
+                    interval_15min = random.randint(48, max_interval) if max_interval > 48 else 48
+                    start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+                
+                # Ensure within bounds
+                start_time = min(start_time, max_start_time)
+            else:
+                # Other clusters: 70% in first 3 hours, 30% distributed after
+                if random.random() < 0.70:
+                    # Start in first 3 hours
+                    max_early_interval = min(47, (PEAK_PERIOD_END - 1) // TIMESLICES_PER_15MIN)
+                    interval_15min = random.randint(0, max_early_interval)
+                    start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
+                else:
+                    # Start after 3 hours (background jobs)
+                    max_interval = max(0, (max_start_time - 1) // TIMESLICES_PER_15MIN)
+                    min_interval = (PEAK_PERIOD_END // TIMESLICES_PER_15MIN)
+                    if max_interval > min_interval:
+                        interval_15min = random.randint(min_interval, max_interval)
+                    else:
+                        interval_15min = min_interval
+                    start_time = 1 + (interval_15min * TIMESLICES_PER_15MIN)
         
         # Calculate end time (must be within window)
         end_time = start_time + duration
@@ -624,7 +696,7 @@ class RealDataConverter:
             
             # Generate realistic timing with cluster-specific duration and start time
             duration = self.generate_realistic_duration(job_name, has_sriov, default_cluster)
-            start_time, end_time = self.generate_individual_job_timing(duration, default_cluster)
+            start_time, end_time = self.generate_individual_job_timing(duration, default_cluster, self.staggered_peak_mode)
             
             # Set MANO requirement based on cluster assignment
             if default_cluster == 0:  # k8s-cicd
@@ -906,6 +978,9 @@ Examples:
   # Convert with 6-hour window (0:00-06:00) for converted2
   python real_data_converter.py data/real-data/export_workloads.csv --output data/converted2 --start-hour 0 --end-hour 6
   
+  # Staggered peak mode: Each cluster peaks at different time
+  python real_data_converter.py data/real-data/export_workloads.csv --output data/converted4 --start-hour 0 --end-hour 6 --staggered-peak
+  
   # Specify custom output directory
   python real_data_converter.py data/real-data/export_workloads.csv --output data/converted-new
         """
@@ -924,11 +999,14 @@ Examples:
                        help='Schedule end hour (default: 6 for 06:00)')
     parser.add_argument('--timeslice-seconds', type=int, default=15,
                        help='Timeslice duration in seconds (default: 15)')
+    parser.add_argument('--staggered-peak', action='store_true',
+                       help='Enable staggered peak mode: each cluster peaks at different time window')
     
     args = parser.parse_args()
     
     try:
-        converter = RealDataConverter(args.input_file, args.clusters, args.nodes, args.output)
+        converter = RealDataConverter(args.input_file, args.clusters, args.nodes, args.output, 
+                                     staggered_peak_mode=args.staggered_peak)
         
         # Apply schedule configuration from command line
         converter.SCHEDULE_START_HOUR = args.start_hour
@@ -944,6 +1022,14 @@ Examples:
         converter.TIMESLICES_PER_HOUR = 3600 // args.timeslice_seconds
         converter.TOTAL_TIMESLICES = converter.TOTAL_SCHEDULE_HOURS * converter.TIMESLICES_PER_HOUR
         converter.TIMESLICES_PER_15MIN = (15 * 60) // args.timeslice_seconds
+        
+        if args.staggered_peak:
+            print("🎯 STAGGERED PEAK MODE ENABLED:")
+            print("   📍 k8s-cicd (Cluster 0): Peak at 0:00-1:30 (90% jobs)")
+            print("   📍 k8s-mano (Cluster 1): Peak at 1:30-3:00 (85% jobs)")
+            print("   📍 pat-141 (Cluster 2): Peak at 3:00-4:30 (85% jobs)")
+            print("   📍 pat-171 (Cluster 3): Peak at 4:30-6:00 (85% jobs)")
+        
         files = converter.convert()
         
         print(f"\n🎉 Conversion completed successfully!")

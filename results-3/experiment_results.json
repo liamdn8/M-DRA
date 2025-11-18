@@ -1,0 +1,70 @@
+{
+  "experiment": "Time Compression - Margin 0.7",
+  "timestamp": "2025-11-18T11:55:06.602383",
+  "margin": 0.7,
+  "datasets": [
+    {
+      "name": "compressed-20x-5m",
+      "description": "5-minute compression (20x)",
+      "path": "data/compressed-20x-5m",
+      "solvers": {
+        "x": {
+          "success": true,
+          "output_dir": "results-3/compressed-20x-5m/solver-x"
+        },
+        "y": {
+          "success": true,
+          "output_dir": "results-3/compressed-20x-5m/solver-y"
+        },
+        "xy": {
+          "success": true,
+          "output_dir": "results-3/compressed-20x-5m/solver-xy"
+        }
+      }
+    },
+    {
+      "name": "compressed-60x-15m",
+      "description": "15-minute compression (60x)",
+      "path": "data/compressed-60x-15m",
+      "solvers": {
+        "x": {
+          "success": true,
+          "output_dir": "results-3/compressed-60x-15m/solver-x"
+        },
+        "y": {
+          "success": true,
+          "output_dir": "results-3/compressed-60x-15m/solver-y"
+        },
+        "xy": {
+          "success": true,
+          "output_dir": "results-3/compressed-60x-15m/solver-xy"
+        }
+      }
+    },
+    {
+      "name": "compressed-120x-30m",
+      "description": "30-minute compression (120x)",
+      "path": "data/compressed-120x-30m",
+      "solvers": {
+        "x": {
+          "success": true,
+          "output_dir": "results-3/compressed-120x-30m/solver-x"
+        },
+        "y": {
+          "success": true,
+          "output_dir": "results-3/compressed-120x-30m/solver-y"
+        },
+        "xy": {
+          "success": true,
+          "output_dir": "results-3/compressed-120x-30m/solver-xy"
+        }
+      }
+    }
+  ],
+  "summary": {
+    "total_tests": 9,
+    "completed": 9,
+    "failed": 0,
+    "success_rate": "100.0%"
+  }
+}

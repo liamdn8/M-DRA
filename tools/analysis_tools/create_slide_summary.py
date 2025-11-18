@@ -28,7 +28,7 @@ def create_slide_summary(data_path):
     # Create figure with 2x2 layout
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16, 10))
     fig.suptitle('M-DRA Dataset Summary - Optimized for Realistic Workload Simulation', 
-                 fontsize=16, fontweight='bold', y=0.95)
+                 fontsize=16, fontweight='bold', y=0.98)
     
     cluster_names = ['k8s-cicd', 'k8s-mano', 'pat-141', 'pat-171']
     colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
@@ -76,24 +76,39 @@ def create_slide_summary(data_path):
     # 2. Workload Timeline for Main Cluster (Top Right)
     cicd_data = workload_df[workload_df['cluster_id'] == 0]  # k8s-cicd
     
-    # Sample data for cleaner visualization (every 4th point)
-    sample_idx = cicd_data.index[::4]
-    time_sample = cicd_data.loc[sample_idx, 'time_minutes']
-    cpu_sample = cicd_data.loc[sample_idx, 'cpu_utilization']
-    mem_sample = cicd_data.loc[sample_idx, 'mem_utilization']
+    # Calculate actual time range from data
+    if not cicd_data.empty:
+        max_timeslice = cicd_data['timeslice'].max()
+        # Use actual max timeslice from data
+        display_max_timeslice = max_timeslice
+    else:
+        display_max_timeslice = 1440  # Fallback to 6 hours = 1440 timeslices
     
-    ax2.plot(time_sample, cpu_sample, label='CPU Utilization', color='#FF6B6B', linewidth=2.5)
-    ax2.plot(time_sample, mem_sample, label='Memory Utilization', color='#4ECDC4', linewidth=2.5)
+    # Use all data points (no sampling) for accurate timeline
+    timeslice_data = cicd_data['timeslice']
+    cpu_data = cicd_data['cpu_utilization']
+    mem_data = cicd_data['mem_utilization']
+    
+    ax2.plot(timeslice_data, cpu_data, label='CPU Utilization', color='#FF6B6B', linewidth=2)
+    ax2.plot(timeslice_data, mem_data, label='Memory Utilization', color='#4ECDC4', linewidth=2)
     
     ax2.axhline(y=90, color='red', linestyle='--', alpha=0.7, linewidth=2, label='CPU Limit')
     ax2.axhline(y=80, color='orange', linestyle='--', alpha=0.7, linewidth=2, label='Memory Limit')
     
-    ax2.set_xlabel('Time (minutes)', fontsize=12)
+    ax2.set_xlabel('Timeslice', fontsize=12)
     ax2.set_ylabel('Utilization (%)', fontsize=12)
-    ax2.set_title('k8s-cicd Cluster Load Timeline (First 5 Hours)', fontsize=14, fontweight='bold')
+    
+    # Dynamic title based on actual timeslice range
+    hours = int(display_max_timeslice / 240)  # 240 timeslices = 1 hour
+    if hours > 0:
+        time_label = f'First {hours} Hours' if hours > 1 else 'First Hour'
+    else:
+        time_label = f'{display_max_timeslice} Timeslices'
+    
+    ax2.set_title(f'k8s-cicd Cluster Load Timeline ({time_label})', fontsize=14, fontweight='bold')
     ax2.legend(fontsize=10)
     ax2.grid(True, alpha=0.3)
-    ax2.set_xlim(0, 300)
+    ax2.set_xlim(0, display_max_timeslice)
     ax2.set_ylim(0, 100)
     
     # 3. Dataset Key Metrics (Bottom Left)
@@ -168,7 +183,8 @@ Optimization Features:
                 ha='center', va='center', fontsize=9, color='white', fontweight='bold')
     
     # Adjust layout and save
-    plt.tight_layout()
+    # Use subplots_adjust instead of tight_layout for better control
+    plt.subplots_adjust(top=0.94, bottom=0.06, left=0.08, right=0.96, hspace=0.3, wspace=0.25)
     
     # Add timestamp
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")

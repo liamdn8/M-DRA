@@ -305,23 +305,27 @@ Performance:
         # Filter for k8s-cicd cluster (cluster_id = 0)
         cicd_data = workload_df[workload_df['cluster_id'] == 0]
         
-        # Plot utilization over time for main cluster
-        time_minutes = cicd_data['time_minutes']
+        # Plot utilization over time for main cluster using timeslice
+        timeslice_data = cicd_data['timeslice']
         
-        ax10.plot(time_minutes, cicd_data['cpu_utilization'], 
+        ax10.plot(timeslice_data, cicd_data['cpu_utilization'], 
                  label='k8s-cicd CPU', color='red', linewidth=2)
-        ax10.plot(time_minutes, cicd_data['mem_utilization'], 
+        ax10.plot(timeslice_data, cicd_data['mem_utilization'], 
                  label='k8s-cicd Memory', color='blue', linewidth=2)
         
         ax10.axhline(y=90, color='red', linestyle='--', alpha=0.5, label='CPU Limit (90%)')
         ax10.axhline(y=80, color='orange', linestyle='--', alpha=0.5, label='Memory Limit (80%)')
         
-        ax10.set_xlabel('Time (minutes)')
+        ax10.set_xlabel('Timeslice')
         ax10.set_ylabel('Utilization (%)')
         ax10.set_title('Peak Cluster (k8s-cicd) Load Timeline')
         ax10.legend()
         ax10.grid(True, alpha=0.3)
-        ax10.set_xlim(0, 300)  # Focus on first 5 hours
+        
+        # Auto-calculate x-axis limit based on actual data
+        max_timeslice = timeslice_data.max() if len(timeslice_data) > 0 else 1440
+        # Display full timeline
+        ax10.set_xlim(0, max_timeslice)
     else:
         ax10.text(0.5, 0.5, 'Workload timeline data not available\nRun workload analysis first', 
                  ha='center', va='center', transform=ax10.transAxes,
