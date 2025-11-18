@@ -1,0 +1,21 @@
+{
+  "dataset_name": "compressed-60x-15m",
+  "source_path": "data/converted3",
+  "target_path": "data/compressed-60x-15m",
+  "reduction_stats": {
+    "jobs": {
+      "original": 209,
+      "reduced": 209,
+      "reduction_ratio": 1.0
+    },
+    "timeslices": {
+      "original": 1439,
+      "reduced": 24,
+      "compression_ratio": 0.01667824878387769
+    },
+    "capacity": {
+      "cpu_reduction": 0.0,
+      "mem_reduction": 0.0
+    }
+  }
+}

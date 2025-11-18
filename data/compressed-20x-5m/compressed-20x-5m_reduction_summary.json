@@ -1,0 +1,21 @@
+{
+  "dataset_name": "compressed-20x-5m",
+  "source_path": "data/converted3",
+  "target_path": "data/compressed-20x-5m",
+  "reduction_stats": {
+    "jobs": {
+      "original": 209,
+      "reduced": 209,
+      "reduction_ratio": 1.0
+    },
+    "timeslices": {
+      "original": 1439,
+      "reduced": 72,
+      "compression_ratio": 0.05003474635163308
+    },
+    "capacity": {
+      "cpu_reduction": 0.0,
+      "mem_reduction": 0.0
+    }
+  }
+}
